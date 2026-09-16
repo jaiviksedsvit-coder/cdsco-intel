@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CDSCO Intel | Indian Drug Approvals & Clinical Regulatory Search</title>
+  <meta name="description" content="Conversational regulatory intelligence engine over 5,139+ official CDSCO Indian drug approvals with clinical therapy area mapping, indication tracking, and slide exports.">
+  
+  <!-- Claude-Style Typography: Inter (UI) + Newsreader (Editorial Serif) + JetBrains Mono (Data) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300..700;1,14..32,300..700&family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400..600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
+  <!-- Stylesheet (v3.2 Cache Busting) -->
+  <link rel="stylesheet" href="/static/style.css?v=3.2">
+  
+  <!-- Favicon / Minimal Vector Icon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2320808d' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'/></svg>">
+</head>
+<body class="theme-dark">
+  <!-- Top Navigation Bar -->
+  <header class="top-nav" id="topNav">
+    <div class="nav-container">
+      <div class="brand-group" id="navBrandBtn" role="button" tabindex="0" title="Return to Home">
+        <div class="brand-icon-wrap">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            <path d="M9 12l2 2 4-4"/>
+          </svg>
+        </div>
+        <div class="brand-text-block">
+          <div class="brand-name">CDSCO<span class="accent-text">INTEL</span></div>
+          <span class="brand-sub">Regulatory Engine</span>
+        </div>
+      </div>
+
+      <div class="nav-middle" id="navMiddleControls" style="display: none;">
+        <!-- Compact search bar for conversation mode -->
+        <div class="compact-search-box">
+          <svg class="search-icon-svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input type="text" id="compactSearchInput" placeholder="Search drug, company, or indication..." autocomplete="off">
+          <button id="compactSearchBtn" aria-label="Search" title="Search">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 10 4 15 9 20"></polyline><path d="M20 4v7a4 4 0 0 1-4 4H4"></path></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="nav-actions">
+        <div class="registry-pill" title="Indexed from official CDSCO SUGAM e-Governance Portal">
+          <span class="pulse-dot"></span>
+          <span class="count" id="totalRecordsCount">5,139</span>
+          <span class="label">Verified Records (2018–2026)</span>
+        </div>
+        <button class="nav-analytics-btn" id="navAnalyticsBtn" title="Platform Analytics & KPI Pulse">
+          <svg class="icon-svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+          <span>Analytics</span>
+        </button>
+        <button class="new-chat-btn" id="newChatBtn" title="Start fresh search session">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          <span class="text">New Search</span>
+        </button>
+        <a href="https://cdscoonline.gov.in/CDSCO/cdscoDrugs" target="_blank" rel="noopener noreferrer" class="nav-link-btn" title="Official CDSCO SUGAM Portal">
+          <span>Official Portal</span>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Viewport -->
+  <main class="main-content" id="mainContent">
+
+    <!-- =========================================================
+         STATE 1: HOMEPAGE (Perplexity / ChatGPT Centered Dark Hero)
+         ========================================================= -->
+    <section class="home-hero-section" id="homeHeroSection">
+      <div class="hero-center-box">
+        <!-- Logo Branding -->
+        <div class="hero-brand-logo">
+          <div class="hero-pill-tag">
+            <span class="hero-tag-dot"></span>
+            <span>Pharma Commercial Strategy &amp; CI Search</span>
+          </div>
+          <h1 class="hero-title">CDSCO <span class="gradient-text">INTEL</span></h1>
+          <p class="hero-subtitle">The conversational regulatory search engine for Indian Pharma</p>
+        </div>
+
+        <!-- Central Search Bar -->
+        <div class="hero-search-wrapper" id="heroSearchWrapper">
+          <div class="hero-search-bar">
+            <svg class="search-magnifier" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input 
+              type="text" 
+              id="heroSearchInput" 
+              placeholder="Ask anything: 'Oncology in 2025', 'Sun Pharma approvals', 'When was Rituximab approved?'"
+              autocomplete="off"
+              spellcheck="false"
+              autofocus
+            >
+            <button class="clear-input-btn" id="heroClearBtn" style="display: none;" title="Clear">✕</button>
+            <button class="hero-submit-btn" id="heroSubmitBtn" title="Search">
+              <span>Search</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Supported Query Formats Guide -->
+        <div class="query-guide-banner" id="queryGuideBanner">
+          <div class="guide-header-line">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+            <span class="guide-title">Supported Query Formats (Click any formula to auto-fill):</span>
+          </div>
+          <div class="guide-chips">
+            <button class="guide-chip" data-query="Vildagliptin" title="Click to test Molecule Search"><code>Molecule:</code> "Vildagliptin" or "Semaglutide"</button>
+            <button class="guide-chip" data-query="Vildagliptin monotherapy" title="Click to test Monotherapy Search"><code>Therapy Mode:</code> "Vildagliptin monotherapy"</button>
+            <button class="guide-chip" data-query="Biologics approved in India" title="Click to test Biologics"><code>Biologics:</code> "Biologics approved in India"</button>
+            <button class="guide-chip" data-query="Small molecules in 2026" title="Click to test Small Molecules"><code>Small Molecules:</code> "Small molecules in 2026"</button>
+            <button class="guide-chip" data-query="Sun Pharma 2025" title="Click to test Company + Year"><code>Company + Year:</code> "Sun Pharma 2025"</button>
+            <button class="guide-chip" data-query="Oncology Finished Formulations" title="Click to test Therapy + Form"><code>Therapy Area:</code> "Oncology Finished Formulations"</button>
+          </div>
+        </div>
+
+        <!-- Suggested Search Pills (Perplexity / ChatGPT style) -->
+        <div class="suggestions-container">
+          <span class="suggest-label">Trending Pharma Clearances:</span>
+          <div class="suggest-pills-row" id="suggestPillsRow">
+            <button class="suggest-pill" data-query="Vildagliptin">Vildagliptin</button>
+            <button class="suggest-pill" data-query="Semaglutide">Semaglutide</button>
+            <button class="suggest-pill" data-query="Biologics approved in India">Biologics</button>
+            <button class="suggest-pill" data-query="Small molecules in 2026">Small Molecules 2026</button>
+            <button class="suggest-pill" data-query="Sun Pharma">Sun Pharma</button>
+            <button class="suggest-pill" data-query="Oncology 2025">Oncology 2025</button>
+          </div>
+        </div>
+
+        <!-- Feature Cards Underneath -->
+        <div class="home-feature-cards">
+          <div class="feat-card" id="cardTherapyAreas">
+            <div class="card-icon-svg">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
+              </svg>
+            </div>
+            <div class="card-content">
+              <h3>24 Clinical Therapy Areas</h3>
+              <p>Pharma-grade taxonomy covering Diabetology, Oncology, Immunology &amp; Allergy, and Rare Diseases.</p>
+              <div class="quick-ta-links" id="quickTaLinks">
+                <span class="mini-ta-pill" data-query="Diabetology">Diabetology</span>
+                <span class="mini-ta-pill" data-query="Oncology">Oncology</span>
+                <span class="mini-ta-pill" data-query="Cardiology">Cardiology</span>
+                <span class="mini-ta-pill" data-query="Anti-Infectives">Anti-Infectives</span>
+                <span class="mini-ta-pill" data-query="Neurology">Neurology</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="feat-card" id="cardZeroHallucination">
+            <div class="card-icon-svg">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="3" y1="9" x2="21" y2="9"></line>
+                <line x1="9" y1="21" x2="9" y2="9"></line>
+              </svg>
+            </div>
+            <div class="card-content">
+              <h3>Official CDSCO SUGAM Registry</h3>
+              <p>Strictly grounded in 5,139 government clearance records (2018–2026). Zero hallucinated dates or indications.</p>
+              <div class="card-badge-line">
+                <span class="status-indicator-live"></span>
+                <span>Sub-3ms Local SQL Engine • Full Form ID audit trail</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="feat-card" id="cardSlideReady">
+            <div class="card-icon-svg">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                <line x1="8" y1="21" x2="16" y2="21"></line>
+                <line x1="12" y1="17" x2="12" y2="21"></line>
+              </svg>
+            </div>
+            <div class="card-content">
+              <h3>Slide-Ready PowerPoint Exports</h3>
+              <p>One-click clipboard export formatted cleanly for client deliverables, pitch decks, and competitive briefings.</p>
+              <div class="card-badge-line">
+                <span>Built for Life Sciences Commercial & Regulatory CI Teams</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================
+         STATE 2: CONVERSATIONAL RESULTS STREAM (Claude / Perplexity Layout)
+         ========================================================= -->
+    <section class="conversation-section" id="conversationSection" style="display: none;">
+      <div class="chat-container" id="chatContainer">
+        
+        <!-- Conversation Thread Messages will be appended here -->
+        <div class="chat-thread" id="chatThread">
+          <!-- Dynamic conversation turn pairs (User message + Assistant Response) -->
+        </div>
+
+      </div>
+
+      <!-- Persistent Bottom Chat Dock (ChatGPT / Perplexity Style) -->
+      <div class="chat-bottom-dock" id="chatBottomDock">
+        <div class="chat-bottom-inner">
+          <div class="chat-input-bar">
+            <textarea 
+              id="bottomChatInput" 
+              rows="1" 
+              placeholder="Search drug substance, clinical indication, or company..." 
+              autocomplete="off"
+              spellcheck="false"
+            ></textarea>
+            <button id="bottomSendBtn" class="chat-send-btn" aria-label="Send query" title="Send (Enter)">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="19" x2="12" y2="5"></line>
+                <polyline points="5 12 12 5 19 12"></polyline>
+              </svg>
+            </button>
+          </div>
+          <div class="chat-input-subtext">
+            CDSCO Intel answers exclusively from official SUGAM clearance records (2018–2026).
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Toast Notification -->
+    <div class="toast-notification" id="toastNotification">
+      <svg class="toast-icon-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+      <span class="toast-message" id="toastMessage">Copied to clipboard!</span>
+    </div>
+  </main>
+
+  <!-- Detailed Modal for Drug Drill-down -->
+  <div class="modal-backdrop" id="detailModalBackdrop" style="display: none;" onclick="if(event.target===this)closeModal()">
+    <div class="modal-card" id="detailModalCard">
+      <div class="modal-header">
+        <div class="modal-badge-group">
+          <div class="modal-ta-wrap" id="modalTherapyTag">
+            <span class="modal-tag">Oncology</span>
+          </div>
+          <span class="modal-cat-tag" id="modalCatTag">Finished Formulation</span>
+        </div>
+        <button class="modal-close-btn" id="modalCloseBtn" onclick="closeModal()" aria-label="Close modal" title="Close dossier (Esc)">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <h3 class="modal-drug-title" id="modalDrugName">-</h3>
+        
+        <div class="modal-grid">
+          <div class="modal-item">
+            <span class="modal-label">Applicant / Manufacturer</span>
+            <span class="modal-val bold" id="modalCompany">-</span>
+          </div>
+          <div class="modal-item">
+            <span class="modal-label">CDSCO Clearance Date</span>
+            <span class="modal-val highlight" id="modalDate">-</span>
+          </div>
+          <div class="modal-item full-width">
+            <span class="modal-label">Approved Clinical Indication</span>
+            <p class="modal-desc" id="modalIndication">-</p>
+          </div>
+          <div class="modal-item full-width">
+            <span class="modal-label">Active Composition &amp; Strength</span>
+            <p class="modal-mono" id="modalComposition">-</p>
+          </div>
+          <div class="modal-item full-width">
+            <span class="modal-label">Manufacturing / Import Site Address</span>
+            <p class="modal-addr" id="modalAddress">-</p>
+          </div>
+        </div>
+
+        <!-- Provenance Block -->
+        <div class="modal-provenance">
+          <div class="prov-left">
+            <div class="prov-icon-svg">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M3 10h18M5 10v11M19 10v11M9 10v11M14 10v11M12 3L2 10h20L12 3z"/></svg>
+            </div>
+            <div>
+              <strong>Central Drugs Standard Control Organisation (CDSCO)</strong>
+              <div class="prov-meta">Official SUGAM e-Governance Record • Filing Form ID: <code id="modalFormId">#54552</code></div>
+            </div>
+          </div>
+          <a href="https://cdscoonline.gov.in/CDSCO/cdscoDrugs" target="_blank" rel="noopener noreferrer" class="prov-link-btn">
+            Verify on Government Portal ↗
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Detailed Analytics & KPI Pulse Modal -->
+  <div class="modal-backdrop" id="analyticsModalBackdrop" style="display: none;" onclick="if(event.target===this)closeAnalyticsModal()">
+    <div class="modal-card analytics-modal-card" id="analyticsModalCard">
+      <div class="modal-header analytics-modal-header">
+        <div class="analytics-header-title-group">
+          <div class="analytics-title-icon">
+            <svg class="icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="20" x2="18" y2="10"></line>
+              <line x1="12" y1="20" x2="12" y2="4"></line>
+              <line x1="6" y1="20" x2="6" y2="14"></line>
+            </svg>
+          </div>
+          <div>
+            <h3 class="modal-title" style="margin: 0; font-size: 17px; font-weight: 700; color: #fff;">Platform Analytics &amp; Regulatory Pulse</h3>
+            <span class="analytics-header-sub" id="analyticsHeaderSync">Auditing live user sessions, engagement depth &amp; query demand</span>
+          </div>
+        </div>
+        <div class="analytics-header-actions">
+          <button class="analytics-refresh-btn" id="analyticsRefreshBtn" title="Refresh Live Metrics">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M23 4v6h-6"></path><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+            <span>Refresh</span>
+          </button>
+          <button class="modal-close-btn" onclick="closeAnalyticsModal()" aria-label="Close analytics modal" title="Close (Esc)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="modal-body analytics-modal-body">
+        <!-- 6 Executive KPI Cards -->
+        <div class="analytics-kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-label-row">
+              <span class="kpi-label">Unique Visitors</span>
+              <span class="kpi-icon-badge" title="Unique active researchers">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              </span>
+            </div>
+            <div class="kpi-value" id="kpiUniqueVisitors">-</div>
+            <div class="kpi-subtext">Active pharmaceutical researchers</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-label-row">
+              <span class="kpi-label">Total Queries</span>
+              <span class="kpi-icon-badge" title="Total search volume">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              </span>
+            </div>
+            <div class="kpi-value" id="kpiTotalQueries">-</div>
+            <div class="kpi-subtext" id="kpiAvgQueriesSub">Avg queries / visitor</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-label-row">
+              <span class="kpi-label">Median Latency</span>
+              <span class="kpi-icon-badge" title="Query execution time">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              </span>
+            </div>
+            <div class="kpi-value" id="kpiAvgLatency">-</div>
+            <div class="kpi-subtext">Sub-second indexed retrieval</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-label-row">
+              <span class="kpi-label">Deliverables Exported</span>
+              <span class="kpi-icon-badge" title="Exported deliverables">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              </span>
+            </div>
+            <div class="kpi-value" id="kpiDeliverables">-</div>
+            <div class="kpi-subtext" id="kpiDeliverablesSub">Excel sheets + Slide tables</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-label-row">
+              <span class="kpi-label">Zero-Match Rate</span>
+              <span class="kpi-icon-badge" style="background: rgba(239, 68, 68, 0.12); border-color: rgba(239, 68, 68, 0.25); color: #f87171;" title="Zero-result rate">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+              </span>
+            </div>
+            <div class="kpi-value" id="kpiZeroRate">-</div>
+            <div class="kpi-subtext" id="kpiZeroSub">Out-of-scope or unmet queries</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-label-row">
+              <span class="kpi-label">Dossier Drill-Downs</span>
+              <span class="kpi-icon-badge" title="Master dossier views">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+              </span>
+            </div>
+            <div class="kpi-value" id="kpiDossierViews">-</div>
+            <div class="kpi-subtext">Full Form ID master audits</div>
+          </div>
+        </div>
+
+        <!-- Mid 2-Column Analytics Sections -->
+        <div class="analytics-row-2col">
+          <!-- Top Searched Molecules & Entities -->
+          <div class="analytics-panel">
+            <div class="panel-header">
+              <h4 class="panel-title">Top Searched Molecules &amp; Queries</h4>
+              <span class="panel-badge">High Demand</span>
+            </div>
+            <div class="panel-list" id="topQueriesList">
+              <!-- Dynamically populated bars -->
+            </div>
+          </div>
+
+          <!-- Top Therapy Areas & Action Mix -->
+          <div class="analytics-panel">
+            <div class="panel-header">
+              <h4 class="panel-title">Top Therapy Areas &amp; Action Mix</h4>
+              <span class="panel-badge">Engagement</span>
+            </div>
+            <div class="panel-list" id="topTasAndActionsList">
+              <!-- Dynamically populated bars -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Full-Width Panel 1: Unmet User Demand (Zero-Result Queries) -->
+        <div class="analytics-panel full-width">
+          <div class="panel-header">
+            <div>
+              <h4 class="panel-title">Unmet Search Demand (Zero-Result Queries)</h4>
+              <p class="panel-desc">Queries that returned 0 approvals — provides direct product roadmap signals (e.g. requests for clinical trials, pre-2018 records, or pricing).</p>
+            </div>
+            <span class="panel-badge alert">Product Roadmap Signals</span>
+          </div>
+          <div class="analytics-table-wrap">
+            <table class="analytics-table" id="zeroResultTable">
+              <thead>
+                <tr>
+                  <th style="width: 50%;">Unmet Search Query</th>
+                  <th style="width: 25%;">Search Volume</th>
+                  <th style="width: 25%;">Product Gap / User Intent</th>
+                </tr>
+              </thead>
+              <tbody id="zeroResultTableBody">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Full-Width Panel 2: Live Regulatory Activity Log -->
+        <div class="analytics-panel full-width">
+          <div class="panel-header">
+            <div>
+              <h4 class="panel-title">Live Regulatory Activity Stream</h4>
+              <p class="panel-desc">Chronological audit of recent search queries, match counts, and execution latencies.</p>
+            </div>
+            <span class="panel-badge live">Live Telemetry</span>
+          </div>
+          <div class="analytics-table-wrap">
+            <table class="analytics-table" id="recentQueriesTable">
+              <thead>
+                <tr>
+                  <th style="width: 45%;">Search Query</th>
+                  <th style="width: 20%;">Matched Records</th>
+                  <th style="width: 20%;">Execution Latency</th>
+                  <th style="width: 15%;">Timestamp</th>
+                </tr>
+              </thead>
+              <tbody id="recentQueriesTableBody">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts (v3.2 Cache Busting) -->
+  <script src="/static/app.js?v=3.2"></script>
+</body>
+</html>

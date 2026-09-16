@@ -1,0 +1,28 @@
+# Environment & Secrets
+.env
+*.env.local
+portfolio-project-brief.md
+
+# Python cache & bytecode
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+
+# Scratch & Temporary Logs
+scratch/
+*.log
+
+# IDE & Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Artifact media storage
+.tempmediaStorage/
