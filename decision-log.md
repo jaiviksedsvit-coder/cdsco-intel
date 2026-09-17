@@ -381,8 +381,37 @@ This document chronicles all pivotal architectural, technical, product scoping, 
   - Live server restarted on port 8000, verified `/api/stats` returns 5,139 and `/api/analytics` returns live JSON metrics.
 * **Why this option won**: Produces a cohesive, executive-grade product aesthetic, satisfies web standards, and reduces deployment friction so the app can be deployed to any cloud host in under 60 seconds with minimal memory footprint (< 50MB RAM).
 
+---
 
-
-
-
-
+### Decision 26: Harmonizing Historical Clearance Dates, Calendar Sort, and Molecule Card Protection
+* **Date**: 2026-09-17
+* **Context**: When searching historical approval queries (e.g. *"when was vildagliptin approved"*), three critical visual inconsistencies occurred simultaneously:
+  1. Top AI text narrative claimed the earliest clearance was `15-DEC-2020` to `Wockhardt`.
+  2. Dynamic Molecule Profile Card was hijacked by an unrelated molecule: `Dapagliflozin Propanediol` (`27-DEC-2021` to `Sun Pharma`).
+  3. Results Table Row 1 (when sorted ascending) displayed `09-JUL-2020` to `Wockhardt` for `Vildagliptin Sustained Release Film Coated Tablets 50 Mg (Oros)`.
+* **Root Cause & Diagnosis**:
+  1. **Molecule Card Hijacking**: Brand resolution in `app.py` inspected whether the candidate string was present in the `brand_name` column of any returned result. In FDC combinations (e.g. `Dapagliflozin + Vildagliptin`), the brand name string contained the word `"vildagliptin"`. This triggered a false positive brand resolution, overwriting `candidate_mol` with the FDC row's first active substance (`Dapagliflozin Propanediol`).
+  2. **AI Text Date Inconsistency**: In `app.py`, the AI summary sorted records by `(approval_year, id)`. In SQLite, database row IDs do not reflect calendar order; row 4371 had date `15-DEC-2020` while row 4692 had date `09-JUL-2020`. Sorting by ID selected the December date instead of the actual July approval.
+  3. **Table Ordering**: Historical queries defaulted to reverse-chronological order (`date_desc`), displaying 2026 clearances at the top of the table. Furthermore, `approval_date_iso` was omitted from search result objects.
+* **Choice & Architecture**:
+  1. **Active Pharmaceutical Molecule Protection**:
+     - Pre-screen candidate molecules against `KNOWN_MOL_MAP` and `KNOWN_MOLECULES` (active substances like Vildagliptin, Semaglutide, Dapagliflozin).
+     - If the candidate matches a recognized molecule, bypass brand resolution completely so combination drug partners can never hijack the molecule card.
+     - Only allow brand resolution when the query is an authentic commercial trade brand (e.g. `Galvus`, `Enhertu`, `Rybelsus`).
+  2. **True Chronological Date Parser (`parse_date_tuple`)**:
+     - Implemented `parse_date_tuple(d_str, d_iso)` in Python and upgraded `parseCdscoDate(dStr, dIso)` in JavaScript to guarantee accurate calendar comparisons (`YYYY-MM-DD`).
+     - Replaced `(approval_year, id)` sort with true chronological date sorting.
+  3. **AI Narrative & Dynamic Molecule Intelligence Alignment**:
+     - For historical queries, conversational summary harmonizes directly with `molecule_intel["first_approval_date"]` and `molecule_intel["earliest_sugam_applicant"]`.
+  4. **Frontend & Backend Historical Sort Default**:
+     - Instructed Gemini Text-to-SQL in `SCHEMA_PROMPT` Rule 10 to sort historical/earliest clearance queries by `approval_date_iso ASC, id ASC LIMIT 2500`.
+     - In `search_endpoint`, set default `sort_by = "date_asc"` for historical queries and sort returned rows ascending.
+     - Include `approval_date_iso` in all SELECT statements and result objects.
+     - In `public/app.js`, display sort indicator `▲` and sort the initial table rows chronologically when `data.sort_by === "date_asc" || data.is_historical`.
+* **Verification**:
+  - Queried `http://127.0.0.1:8000/api/search?q=when+was+vildagliptin+approved`:
+    - AI Summary: Earliest clearance granted on `09-JUL-2020` to `Wockhardt` across 112 verified clearances.
+    - Molecule Profile Card: `Vildagliptin`, Earliest SUGAM Clearance `09-JUL-2020` to `Wockhardt` (17 Monotherapy, 95 Combinations).
+    - Table Row 1: `Vildagliptin Sustained Release Film Coated Tablets 50 Mg (Oros)`, `Wockhardt`, `09-JUL-2020`, with sort indicator `▲`.
+  - Tested regression queries: `when was semaglutide approved` (29-JUL-2020), `when was dapagliflozin approved` (03-JUL-2020), and trade brand `enhertu` (correctly resolves to Trastuzumab Deruxtecan).
+* **Why this option won**: Guarantees complete 100% harmony across all three visual areas of the UI and prevents false brand resolution from ever corrupting active drug substances.

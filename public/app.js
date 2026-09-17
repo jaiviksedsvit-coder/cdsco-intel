@@ -77,9 +77,16 @@ const MONTH_MAP = {
   JUL: 6, AUG: 7, SEP: 8, OCT: 9, NOV: 10, DEC: 11
 };
 
-function parseCdscoDate(dStr) {
+function parseCdscoDate(dStr, dIso) {
+  if (dIso && /^\d{4}-\d{2}-\d{2}$/.test(String(dIso).trim())) {
+    return new Date(String(dIso).trim()).getTime();
+  }
   if (!dStr) return 0;
-  const parts = String(dStr).trim().split("-");
+  const s = String(dStr).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    return new Date(s).getTime();
+  }
+  const parts = s.split("-");
   if (parts.length === 3) {
     const day = parseInt(parts[0], 10) || 1;
     const mStr = parts[1].toUpperCase();
@@ -621,7 +628,11 @@ function renderAssistantResponse(blockEl, query, data) {
 
   // 3. Data Artifact Card (Table with Multi-Filters, Distinct Approvals Toggle & Date Sorting)
   if (results.length > 0) {
+    const isAsc = Boolean(data && (data.sort_by === "date_asc" || data.is_historical));
     const distinctList = groupApprovals(results);
+    if (isAsc) {
+      distinctList.sort((a, b) => parseCdscoDate(a.approval_date, a.approval_date_iso) - parseCdscoDate(b.approval_date, b.approval_date_iso));
+    }
 
     // Compute unique filter values
     const uniqueComps = [...new Set(results.map(r => r.company_std || r.company).filter(Boolean))].sort();
@@ -724,7 +735,7 @@ function renderAssistantResponse(blockEl, query, data) {
                 <th style="width: 13%;">Therapy Area</th>
                 <th style="width: 14%;">Molecule Type</th>
                 <th style="width: 12%; cursor: pointer;" class="sortable-th sort-date-th" title="Click to sort by date (Newest / Oldest)">
-                  Approval Date <span class="sort-indicator">▼</span>
+                  Approval Date <span class="sort-indicator">${isAsc ? "▲" : "▼"}</span>
                 </th>
                 <th style="width: 16%;">Approved Indication</th>
               </tr>
@@ -758,7 +769,7 @@ function renderAssistantResponse(blockEl, query, data) {
   content.innerHTML = html;
 
   // Bind row clicks, filter dropdowns, date sorting, and view toggle
-  bindArtifactEvents(blockEl, results);
+  bindArtifactEvents(blockEl, results, data);
 }
 
 // Render Single Table Row
@@ -842,10 +853,14 @@ function renderTableRow(r) {
 }
 
 // Bind Events inside Artifact (Filters, Date Sorting, Copy, CSV, Modal, View Toggle)
-function bindArtifactEvents(blockEl, initialResults) {
+function bindArtifactEvents(blockEl, initialResults, data) {
+  const isAsc = Boolean(data && (data.sort_by === "date_asc" || data.is_historical));
   const distinctResults = groupApprovals(initialResults);
+  if (isAsc) {
+    distinctResults.sort((a, b) => parseCdscoDate(a.approval_date, a.approval_date_iso) - parseCdscoDate(b.approval_date, b.approval_date_iso));
+  }
   let currentResults = [...distinctResults];
-  let sortDirection = "desc"; // "desc" | "asc"
+  let sortDirection = isAsc ? "asc" : "desc";
   let activeFormFilter = ""; // Tracks the quick-mode chip selection independently
   let activeViewMode = "distinct"; // Tracks active view mode ("distinct" | "all")
 
@@ -892,9 +907,9 @@ function bindArtifactEvents(blockEl, initialResults) {
 
       // Re-apply sorting if user changed sort direction
       if (sortDirection === "asc") {
-        currentResults.sort((a, b) => parseCdscoDate(a.approval_date) - parseCdscoDate(b.approval_date));
+        currentResults.sort((a, b) => parseCdscoDate(a.approval_date, a.approval_date_iso) - parseCdscoDate(b.approval_date, b.approval_date_iso));
       } else {
-        currentResults.sort((a, b) => parseCdscoDate(b.approval_date) - parseCdscoDate(a.approval_date));
+        currentResults.sort((a, b) => parseCdscoDate(b.approval_date, b.approval_date_iso) - parseCdscoDate(a.approval_date, a.approval_date_iso));
       }
 
       if (tbody) {
@@ -990,8 +1005,8 @@ function bindArtifactEvents(blockEl, initialResults) {
 
       // Sort currentResults
       currentResults.sort((a, b) => {
-        const tA = parseCdscoDate(a.approval_date);
-        const tB = parseCdscoDate(b.approval_date);
+        const tA = parseCdscoDate(a.approval_date, a.approval_date_iso);
+        const tB = parseCdscoDate(b.approval_date, b.approval_date_iso);
         return sortDirection === "asc" ? tA - tB : tB - tA;
       });
 

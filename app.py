@@ -249,6 +249,46 @@ COMPANY_ALIASES = {
 }
 
 
+MONTH_MAP_PY = {
+    'JAN': '01', 'FEB': '02', 'MAR': '03', 'APR': '04', 'MAY': '05', 'JUN': '06',
+    'JUL': '07', 'AUG': '08', 'SEP': '09', 'OCT': '10', 'NOV': '11', 'DEC': '12'
+}
+
+def parse_date_tuple(d_str, d_iso=None):
+    """Returns ISO format 'YYYY-MM-DD' for accurate chronological sorting."""
+    if d_iso and re.match(r'^\d{4}-\d{2}-\d{2}$', str(d_iso).strip()):
+        return str(d_iso).strip()
+    if not d_str:
+        return "9999-99-99"
+    s = str(d_str).strip()
+    if re.match(r'^\d{4}-\d{2}-\d{2}$', s):
+        return s
+    parts = s.split('-')
+    if len(parts) == 3:
+        try:
+            day = int(parts[0])
+            mon = MONTH_MAP_PY.get(parts[1].upper(), '01')
+            year = int(parts[2])
+            return f"{year:04d}-{mon}-{day:02d}"
+        except Exception:
+            pass
+    return "9999-99-99"
+
+def get_row_val(row, key, default=None):
+    """Safely retrieves a key from either a dict or a sqlite3.Row object."""
+    if row is None:
+        return default
+    if isinstance(row, dict):
+        return row.get(key, default)
+    try:
+        if key in row.keys():
+            val = row[key]
+            return val if val is not None else default
+    except Exception:
+        pass
+    return default
+
+
 def parse_query_intent(query):
     """Parses natural language query into structured criteria."""
     q = query.strip()
@@ -272,7 +312,11 @@ def parse_query_intent(query):
             is_greeting = True
 
     # Check for historical launch question
-    is_historical_q = any(w in q_lower for w in ["when was", "first launched", "first approved", "history", "launch date", "originator"])
+    is_historical_q = any(w in q_lower for w in [
+        "when was", "when were", "first launched", "first approved", "first launch",
+        "earliest launch", "earliest approval", "earliest clearance", "earliest",
+        "history", "launch date", "originator"
+    ])
 
     # 1. Detect Therapy Area
     matched_synonym = None
@@ -882,7 +926,9 @@ Translation & Mapping Rules:
 9. Threshold & Ranking queries (e.g. "companies with 5+ approvals in oncology in 2025" or "who has the most approvals in 2024"):
    Do NOT use GROUP BY or HAVING because the analytical layer needs all individual approval rows to display the full interactive table and calculate exact thresholds. Instead, filter by the therapy area, year, and/or dosage:
    e.g. "which company has 5+ approvals in oncology in 2025" -> SELECT * FROM approvals WHERE therapy_area = 'Oncology' AND approval_year = 2025 ORDER BY approval_date_iso DESC, id DESC LIMIT 2500
-10. Always append: ORDER BY approval_date_iso DESC, id DESC LIMIT 2500
+10. ORDER BY clause:
+   - For historical, first approval, earliest clearance, origin, or launch date queries (e.g. "when was X approved", "first clearance for Y", "earliest approval", "when did X launch"): ORDER BY approval_date_iso ASC, id ASC LIMIT 2500
+   - For all other queries: ORDER BY approval_date_iso DESC, id DESC LIMIT 2500
 11. Only generate read-only SELECT statements. Never generate UPDATE, DELETE, DROP, or INSERT.
 """
 
@@ -1308,7 +1354,7 @@ async def search_endpoint(request):
     comp_filter = request.query_params.get("comp", "").strip()
     mol_filter = request.query_params.get("mol_type", "").strip()
     form_filter = request.query_params.get("form_type", "").strip()
-    sort_by = request.query_params.get("sort", "date_desc").strip()
+    raw_sort = request.query_params.get("sort", "").strip()
 
     # Allow full results (e.g. 575 in 2026, 615 in 2025, 1023 in 2022) without arbitrary 100-result truncation
     limit = int(request.query_params.get("limit", 2500))
@@ -1317,6 +1363,25 @@ async def search_endpoint(request):
 
     parsed = parse_query_intent(query)
     is_refinement = False
+    q_low = query.lower()
+
+    # Detect historical / first launch query intent
+    is_historical_q = bool(
+        parsed.get("is_historical") or
+        any(t in q_low for t in [
+            "when was", "when were", "first approved", "first launch", "first launched",
+            "earliest approval", "earliest clearance", "earliest launch", "earliest",
+            "history", "launch date", "originator"
+        ])
+    )
+
+    # Set sort order: ascending by calendar date for historical queries, descending for general browsing
+    if raw_sort:
+        sort_by = raw_sort
+    elif is_historical_q:
+        sort_by = "date_asc"
+    else:
+        sort_by = "date_desc"
 
     # Override with manual dropdowns if passed
     if ta_filter: parsed["therapy_area"] = ta_filter
@@ -1400,7 +1465,7 @@ async def search_endpoint(request):
             SELECT id, form_id, division_id, drug_name, clean_molecule, brand_name,
                    company, company_std, composition, dosage, indication,
                    approval_date, approval_year, applied_for, therapy_area,
-                   product_category, molecule_type, regulatory_type
+                   product_category, molecule_type, regulatory_type, approval_date_iso
             FROM approvals
         """
         if conditions:
@@ -1412,7 +1477,7 @@ async def search_endpoint(request):
             order_parts.append("CASE WHEN clean_molecule LIKE ? THEN 0 WHEN drug_name LIKE ? THEN 1 WHEN brand_name LIKE ? THEN 2 ELSE 3 END")
             params.extend([f"%{first_kw}%", f"%{first_kw}%", f"%{first_kw}%"])
 
-        # Handle explicit sort direction from UI
+        # Handle explicit sort direction from UI or historical default
         if sort_by == "date_asc":
             order_parts.append("approval_date_iso ASC")
         elif sort_by == "date_desc":
@@ -1442,13 +1507,14 @@ async def search_endpoint(request):
                     corr_params.append(parsed["year"])
                 corr_conds.append("(clean_molecule LIKE ? OR drug_name LIKE ?)")
                 corr_params.extend([f"%{corrected_mol}%", f"%{corrected_mol}%"])
+                corr_order = "approval_date_iso ASC" if sort_by == "date_asc" else "approval_date_iso DESC"
                 corr_sql = f"""
                     SELECT id, form_id, division_id, drug_name, clean_molecule, brand_name,
                            company, company_std, composition, dosage, indication,
                            approval_date, approval_year, applied_for, therapy_area,
-                           product_category, molecule_type, regulatory_type
+                           product_category, molecule_type, regulatory_type, approval_date_iso
                     FROM approvals WHERE {" AND ".join(corr_conds)}
-                    ORDER BY approval_date_iso DESC LIMIT ?
+                    ORDER BY {corr_order} LIMIT ?
                 """
                 corr_params.append(limit)
                 c.execute(corr_sql, corr_params)
@@ -1466,13 +1532,14 @@ async def search_endpoint(request):
                 fallback_params.append(parsed["year"])
             fallback_conds.append("indication LIKE ?")
             fallback_params.append(f"%{parsed['clean_text']}%")
+            fb_order = "approval_date_iso ASC" if sort_by == "date_asc" else "approval_date_iso DESC"
             fallback_sql = f"""
                 SELECT id, form_id, division_id, drug_name, clean_molecule, brand_name,
                        company, company_std, composition, dosage, indication,
                        approval_date, approval_year, applied_for, therapy_area,
-                       product_category, molecule_type, regulatory_type
+                       product_category, molecule_type, regulatory_type, approval_date_iso
                 FROM approvals WHERE {" AND ".join(fallback_conds)}
-                ORDER BY approval_date_iso DESC LIMIT ?
+                ORDER BY {fb_order} LIMIT ?
             """
             fallback_params.append(limit)
             c.execute(fallback_sql, fallback_params)
@@ -1488,6 +1555,10 @@ async def search_endpoint(request):
                 rows = llm_rows
                 used_llm = True
 
+    # If historical query or date_asc requested, guarantee true chronological ascending order
+    if (is_historical_q or sort_by == "date_asc") and rows:
+        rows = sorted(rows, key=lambda x: (parse_date_tuple(get_row_val(x, "approval_date"), get_row_val(x, "approval_date_iso")), get_row_val(x, "id", 0)))
+
     results = []
     for r in rows:
         comp_name = r["company"] or ""
@@ -1497,6 +1568,7 @@ async def search_endpoint(request):
         clean_m = r["clean_molecule"] if "clean_molecule" in r.keys() else ""
         is_fdc = is_combination_formulation(d_name, comp_str, clean_m)
         formulation_type = "Combination (FDC)" if is_fdc else "Monotherapy"
+        iso_val = r["approval_date_iso"] if "approval_date_iso" in r.keys() and r["approval_date_iso"] else parse_date_tuple(r["approval_date"])
         
         results.append({
             "id": r["id"],
@@ -1512,6 +1584,7 @@ async def search_endpoint(request):
             "dosage": r["dosage"],
             "indication": r["indication"],
             "approval_date": r["approval_date"],
+            "approval_date_iso": iso_val,
             "approval_year": r["approval_year"],
             "applied_for": r["applied_for"],
             "therapy_area": r["therapy_area"],
@@ -1549,21 +1622,43 @@ async def search_endpoint(request):
     if not is_macro_query:
         candidate_mol = parsed["clean_text"] or (parsed.get("historical_match") or {}).get("molecule")
         
-        # If user searched a brand name, resolve to the underlying active clean_molecule
-        if candidate_mol and results:
-            first_clean = results[0].get("clean_molecule")
-            if first_clean and first_clean.lower() != candidate_mol.lower():
-                # Verify if candidate_mol actually matched brand_name in the results
-                if any(candidate_mol.lower() == (r.get("brand_name") or "").lower() or 
-                       candidate_mol.lower() in (r.get("brand_name") or "").lower().split() 
-                       for r in results):
-                    candidate_mol = first_clean
+        # Check if candidate_mol or raw query matches an active pharmaceutical molecule in KNOWN_MOL_MAP / KNOWN_MOLECULES
+        candidate_is_known_molecule = False
+        if candidate_mol:
+            c_low = candidate_mol.lower().strip()
+            if c_low in KNOWN_MOL_MAP:
+                candidate_mol = KNOWN_MOL_MAP[c_low]
+                candidate_is_known_molecule = True
+            else:
+                for km_key, km_val in sorted(KNOWN_MOL_MAP.items(), key=lambda x: len(x[0]), reverse=True):
+                    if re.search(r'\b' + re.escape(km_key) + r'\b', c_low):
+                        candidate_mol = km_val
+                        candidate_is_known_molecule = True
+                        break
+
+        # If not matched yet, check query text directly against KNOWN_MOL_MAP
+        if not candidate_is_known_molecule:
+            for km_key, km_val in sorted(KNOWN_MOL_MAP.items(), key=lambda x: len(x[0]), reverse=True):
+                if re.search(r'\b' + re.escape(km_key) + r'\b', q_low):
+                    candidate_mol = km_val
+                    candidate_is_known_molecule = True
+                    break
+
+        # ONLY if the user did NOT search a recognized active substance, resolve if they searched a trade brand name
+        if candidate_mol and not candidate_is_known_molecule and results:
+            for r in results:
+                b_name = (r.get("brand_name") or "").strip().lower()
+                clean_m = (r.get("clean_molecule") or "").strip()
+                if b_name and clean_m and not is_generic_brand_string(b_name, clean_m):
+                    if candidate_mol.lower() == b_name or candidate_mol.lower() in b_name.split():
+                        candidate_mol = clean_m
+                        break
 
         # Validate that candidate_mol is a genuine recognized pharmaceutical molecule or commercial brand
         is_known_mol = False
         if candidate_mol and len(candidate_mol) >= 3:
             c_low = candidate_mol.lower().strip()
-            if c_low in KNOWN_MOL_MAP or any(c_low == (m.lower() if m else '') for m in KNOWN_MOLECULES):
+            if candidate_is_known_molecule or c_low in KNOWN_MOL_MAP or any(c_low == (m.lower() if m else '') for m in KNOWN_MOLECULES):
                 is_known_mol = True
             elif results and any(c_low == (r.get("clean_molecule") or "").lower() for r in results):
                 is_known_mol = True
@@ -1608,14 +1703,23 @@ async def search_endpoint(request):
             if used_llm:
                 analytical_ans += "\n\n*(Synthesized via generative Text-to-SQL layer)*"
             conversational_summary = analytical_ans
-        elif parsed["is_historical"] or "when was" in query.lower() or "first approved" in query.lower():
-            kw = parsed["clean_text"].lower() if parsed["clean_text"] else ""
-            exact_matches = [r for r in results if kw and kw in (r["clean_molecule"] or r["drug_name"] or "").lower()]
-            pool = exact_matches if exact_matches else results
-            earliest = sorted(pool, key=lambda x: (x["approval_year"], x["id"]))[0]
-            mol_disp = earliest['clean_molecule'] or earliest['drug_name']
+        elif is_historical_q:
+            # If molecule_intel is available and has first_approval_date, harmonize with it 100%
+            if molecule_intel and molecule_intel.get("first_approval_date"):
+                earliest_date = molecule_intel["first_approval_date"]
+                earliest_comp = molecule_intel.get("earliest_sugam_applicant") or molecule_intel.get("first_applicant") or "Registered Firm"
+                mol_disp = molecule_intel.get("molecule") or candidate_mol or "this substance"
+            else:
+                kw = parsed["clean_text"].lower() if parsed["clean_text"] else ""
+                exact_matches = [r for r in results if kw and kw in (r.get("clean_molecule") or r.get("drug_name") or "").lower()]
+                pool = exact_matches if exact_matches else results
+                earliest = sorted(pool, key=lambda x: (parse_date_tuple(x.get("approval_date"), x.get("approval_date_iso")), x.get("id", 0)))[0]
+                earliest_date = earliest.get("approval_date")
+                earliest_comp = earliest.get("company_std") or earliest.get("company")
+                mol_disp = earliest.get("clean_molecule") or earliest.get("drug_name")
+
             narrative_parts.append(
-                f"In the official **CDSCO SUGAM digital registry (2018–2026)**, the earliest recorded portal clearance for **{mol_disp}** was granted on **{earliest['approval_date']}** to **{earliest['company_std']}**."
+                f"In the official **CDSCO SUGAM digital registry (2018–2026)**, the earliest recorded portal clearance for **{mol_disp}** was granted on **{earliest_date}** to **{earliest_comp}**."
             )
             narrative_parts.append(f" Across the modern registry, there are **{total_count} verified clearances** ({biologic_count} Biologic, {small_mol_count} Small Molecule).")
             if did_you_mean:
@@ -1734,6 +1838,8 @@ async def search_endpoint(request):
         "query": query,
         "is_refinement": is_refinement,
         "is_greeting": parsed.get("is_greeting", False),
+        "sort_by": sort_by,
+        "is_historical": is_historical_q,
         "did_you_mean": did_you_mean,
         "active_context": {
             "therapy_area": parsed["therapy_area"],
