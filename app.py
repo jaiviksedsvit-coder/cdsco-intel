@@ -888,7 +888,7 @@ Key Columns:
 - clean_molecule (TEXT) e.g. "Durvalumab", "Semaglutide", "Ustekinumab", "Rituximab", "Trastuzumab Deruxtecan", "Acalabrutinib"
 - brand_name (TEXT) e.g. "Enhertu", "Rybelsus", "Wegovy", "Ozempic", "Darzalex Faspro", "Ustekirel", "Calquence", "Lynparza"
 - company (TEXT) raw applicant firm name
-- company_std (TEXT) standardized parent firm e.g. "Sun Pharma", "AstraZeneca", "Bristol Myers Squibb", "Roche", "Cipla", "Dr. Reddy's Laboratories", "Novartis", "Pfizer", "MSD Pharma", "Johnson & Johnson", "Eli Lilly", "Sanofi", "Novo Nordisk", "Intas Pharmaceuticals", "Zydus Lifesciences"
+- company_std (TEXT) standardized parent firm e.g. "Sun Pharma", "AstraZeneca", "Bristol Myers Squibb", "Roche", "Cipla", "Dr. Reddy's Laboratories", "Novartis", "Pfizer", "MSD Pharma", "Johnson & Johnson", "Eli Lilly", "Sanofi", "Novo Nordisk", "Intas Pharmaceuticals", "Zydus Lifesciences", "MSN Laboratories", "Shilpa Medicare", "BDR Pharmaceuticals", "Optimus Pharma"
 - therapy_area (TEXT) one of 24 clinical therapy areas: "Oncology", "Diabetology", "Cardiology", "Neurology", "Women's Health", "Anti-Infectives", "Gastroenterology", "Pulmonology", "Rheumatology", "Dermatology", "Ophthalmology", "Hematology", "Nephrology", "Vaccines", "Psychiatry", "Urology", "Pain & Analgesics", "Endocrinology", "Anesthesia & Critical Care", "Rare Diseases & ERT", "Diagnostics & Imaging", "Excipients & Solvents", "VMS & Nutrition", "Other"
 - product_category (TEXT) "Finished Formulation" or "Bulk API"
 - molecule_type (TEXT) "Biologic" or "Small Molecule"

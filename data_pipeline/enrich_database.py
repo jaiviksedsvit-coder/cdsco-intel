@@ -163,16 +163,15 @@ def clean_drug_molecule(name):
     return parts[0].strip().title()
 
 def standardize_company(comp):
-    if not comp:
-        return "Unknown"
-    comp_lower = comp.lower().strip()
-    for pattern, std_name in COMPANY_MAP.items():
-        if pattern in comp_lower:
-            return std_name
-    # Clean generic suffixes
-    clean = re.sub(r'\b(pvt\.?|ltd\.?|limited|private|inc\.?|llp|corp\.?|pharma|pharmaceuticals?|laboratories|labs)\b', '', comp, flags=re.IGNORECASE)
-    clean = clean.strip(" ,.-")
-    return clean if clean else comp.strip()
+    try:
+        from data_pipeline.standardize_companies import standardize_company_name
+        return standardize_company_name(comp)
+    except ImportError:
+        try:
+            from standardize_companies import standardize_company_name
+            return standardize_company_name(comp)
+        except ImportError:
+            return comp.strip() if comp else "Unknown"
 
 def is_biologic(drug_name, composition, category):
     text = (drug_name + " " + composition).lower()

@@ -466,3 +466,36 @@ This document chronicles all pivotal architectural, technical, product scoping, 
   - Restored `bottomChatInput.addEventListener("keydown")` listener and bumped script cache buster to `?v=3.5`.
 * **Why this option won**: Delivers an instant, fluid conversational experience matching ChatGPT/Perplexity, where users immediately see their question and the active synthesizing space without any frozen screen or manual scrolling.
 
+---
+
+### Decision 29: Canonical Company Name Standardization & Honorific Prefix Normalization
+* **Date**: 2026-09-17
+* **Context**: User noted redundant and repeating company names in the database and UI filters/tables, citing examples like `M/S MSN` vs `MSN`, and duplicate conglomerate entities.
+* **Root Causes Diagnosed**:
+  1. **Honorific Legal Prefixes (`M/s`, `M/s.`, `M/S`, `Messrs`)**: In official CDSCO SUGAM filings, 26 applicant company names began with `M/s.` or `M/S.`, which were not stripped during initial enrichment, causing duplicate entries in the database and frontend dropdowns (e.g. `M/s. MSN Life Sciences` vs `MSN Laboratories`, `M/s  OPTIMUS DRUGS` vs `Optimus`, `M/s. Beta Drugs` vs `Beta Drugs`).
+  2. **Conglomerate & Subsidiary Fragmentation**: Companies like MSN Group had approvals split across `MSN Laboratories` (148), `M/s. MSN Life Sciences` (23), `MSN Organics` (2), and `MSN Pharmachem` (1). Similarly, `Shilpa Medicare` was split across 6 separate entries (`Shilpa Medicare`, `Shilpa Medicare , Unit-IV`, `Shilpa Biologicals`, `Shilpa Therapeutics`, `Shilpa Lifesciences`), and `Optimus` across 3.
+  3. **False Substring Matching**: The previous substring matcher `if "roche" in comp_lower` falsely matched `M/s METROCHEM API PVT LTD` (because `"roche"` is inside `metROCHE-m`), incorrectly mapping Metrochem approvals to Roche.
+* **Choice & Architecture**:
+  1. **Robust Prefix Stripping (`r'^\s*(m/s\.?|messrs\.?)\s*'` with slash)**: Specifically targets honorific legal prefixes without corrupting names starting with `MS` like `MSN` or `MSD`.
+  2. **Strict Regex Word Boundaries (`\b<name>\b`)**: Prevents false substring collisions (such as `Metrochem` -> `Roche`).
+  3. **Canonical Conglomerate Rules**:
+     - MSN Group (`MSN Laboratories`, `MSN Life Sciences`, `MSN Organics`, `MSN Pharmachem`) -> **`MSN Laboratories`** (unified total: 172 records).
+     - Shilpa Group (`Shilpa Medicare`, `Shilpa Biologicals`, `Shilpa Therapeutics`, Unit-IV, Unit-VI) -> **`Shilpa Medicare`** (unified total: 48 records).
+     - Optimus Group (`Optimus`, `Optimus Drugs`, Unit III) -> **`Optimus Pharma`** (unified total: 60 records).
+     - Metrochem Group (`M/s METROCHEM API`) -> **`Metrochem API`** (unified total: 17 records, unlinked from Roche).
+     - BDR Group (`BDR International`, `BDR Lifesciences`) -> **`BDR Pharmaceuticals`** (unified total: 93 records).
+     - Maithri Group (`M/s. Maithri`, `M/s. MAITHRI Drugs`) -> **`Maithri Drugs`** (unified total: 6 records).
+     - Lee Group (`M/s. LEE PHARMA LIMITED`) -> **`Lee Pharma`** (unified total: 18 records).
+     - J.B. Chemicals (`Unique Pharmaceutical Laboratories (A Division Of J. B. Chemicals...)`) -> **`J.B. Chemicals & Pharmaceuticals`**.
+  4. **Clean Corporate Suffix & Title Casing**: Preserves `& Co` (e.g. `Arun & Co`, `G. Loucatos & Co`) while stripping trailing legal entity tags (`Pvt Ltd`, `LLP`, unit descriptors), and converts all-caps entries into clean title case.
+  5. **Database Migration & Pipeline Sync**:
+     - Ran `data_pipeline/standardize_companies.py` across all 5,139 rows in `cdsco_approvals.db`.
+     - Reduced distinct `company_std` values from 425 to 402 clean canonical names, with exactly 0 `M/s` prefixes remaining.
+     - Updated `data_pipeline/enrich_database.py` and `SCHEMA_PROMPT` in `app.py`.
+* **Verification**:
+  - Queried `GET /api/search?q=MSN`: all 172 approvals return unified `company_std: "MSN Laboratories"`.
+  - Queried `GET /api/search?q=Metrochem`: all 17 approvals return unified `company_std: "Metrochem API"`.
+  - Verified 0 remaining `M/s` prefixes in `cdsco_approvals.db`.
+* **Why this option won**: Cleans and unifies corporate intelligence across analytics tables, dropdown filters, AI synthesis, and molecule cards without losing raw regulatory traceability (preserved in `company` column).
+
+
