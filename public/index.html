@@ -11,8 +11,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300..700;1,14..32,300..700&family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400..600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   
-  <!-- Stylesheet (v3.6 Cache Busting) -->
-  <link rel="stylesheet" href="/static/style.css?v=3.6">
+  <!-- Stylesheet (v3.7 Cache Busting) -->
+  <link rel="stylesheet" href="/static/style.css?v=3.7">
   
   <!-- Favicon / Minimal Vector Icon -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2320808d' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'/></svg>">
@@ -303,25 +303,35 @@
 
         <!-- Provenance Block -->
         <div class="modal-provenance">
-          <div class="prov-left">
-            <div class="prov-icon-svg">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M3 10h18M5 10v11M19 10v11M9 10v11M14 10v11M12 3L2 10h20L12 3z"/></svg>
+          <div class="prov-top-row">
+            <div class="prov-left">
+              <div class="prov-icon-svg">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M3 10h18M5 10v11M19 10v11M9 10v11M14 10v11M12 3L2 10h20L12 3z"/></svg>
+              </div>
+              <div>
+                <strong>Central Drugs Standard Control Organisation (CDSCO)</strong>
+                <div class="prov-meta">
+                  Official SUGAM e-Governance Filing • Form ID: <code id="modalFormId">#54552</code> • <span id="modalDivisionTag" class="prov-div-tag">Division 1 (Biologicals)</span>
+                </div>
+              </div>
             </div>
-            <div>
-              <strong>Central Drugs Standard Control Organisation (CDSCO)</strong>
-              <div class="prov-meta">Official SUGAM e-Governance Record • Filing Form ID: <code id="modalFormId">#54552</code></div>
+            <div class="prov-actions">
+              <button id="modalGovPortalBtn" type="button" class="prov-link-btn prov-link-portal-primary" title="Open official SUGAM portal with Form ID auto-copied to clipboard">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                Verify on Government SUGAM Portal ↗
+              </button>
+              <div class="prov-copy-group">
+                <button id="modalCopyFormIdBtn" type="button" class="prov-copy-chip" title="Click to copy Form ID to clipboard">
+                  Copy Form ID (<span id="modalCopyFormIdVal">#54552</span>)
+                </button>
+                <button id="modalCopyMolBtn" type="button" class="prov-copy-chip" title="Click to copy Drug Name to clipboard">
+                  Copy Drug Name
+                </button>
+              </div>
             </div>
           </div>
-          <div class="prov-actions">
-            <a id="modalGovRecordLink" href="https://cdscoonline.gov.in/CDSCO/cdscoDrugs" target="_blank" rel="noopener noreferrer" class="prov-link-btn prov-link-live" title="View live CDSCO e-governance record">
-              Official SUGAM Record ↗
-            </a>
-            <button id="modalGovPortalBtn" type="button" class="prov-link-btn prov-link-portal" title="Copy molecule name to clipboard and open CDSCO search portal">
-              Search on CDSCO Portal ↗
-            </button>
-            <a id="modalGovGazetteLink" href="https://cdsco.gov.in/opencms/opencms/en/Approvals/List-of-Approved-New-Drugs/" target="_blank" rel="noopener noreferrer" class="prov-link-btn prov-link-gazette" title="View official Ministry Gazette / Circular list">
-              Official Gazette ↗
-            </a>
+          <div class="prov-instruction">
+            <span>💡 <strong>How to verify:</strong> Clicking above copies the <strong>Form ID</strong> and opens the official SUGAM registry. Simply paste (Ctrl+V) into the <em>Search</em> box (by Drug, Manufacturer, Indication...) to pull up the original government filing.</span>
           </div>
         </div>
       </div>
@@ -506,7 +516,7 @@
     </div>
   </div>
 
-  <!-- Scripts (v3.6 Cache Busting) -->
-  <script src="/static/app.js?v=3.6"></script>
+  <!-- Scripts (v3.7 Cache Busting) -->
+  <script src="/static/app.js?v=3.7"></script>
 </body>
 </html>

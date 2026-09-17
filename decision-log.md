@@ -519,9 +519,31 @@ This document chronicles all pivotal architectural, technical, product scoping, 
   2. **Styling & Cache Busting**:
      - Implemented `.prov-actions` with modern CSS badge variants (`.prov-link-live`, `.prov-link-portal`, `.prov-link-gazette`) and responsive wrapping.
      - Bumped script and stylesheet cache busters to `?v=3.6` in `public/index.html`.
+---
+
+### Decision 31: Removal of Raw JSON & Broken Gazette Links, Streamlining SUGAM Verification with Auto-Copied Form ID & Division Tag
+* **Date**: 2026-09-17
+* **Context**: User provided two visual screenshots and specific feedback:
+  1. *Screenshot 1*: Clicking the live API link (`/loadDrugApprovals`) opened an unformatted raw JSON dump (`{"iTotalDisplayRecords":9, "aaData":[...]}`) in the user's browser, which was messy and confusing for end users.
+  2. *Gazette Link*: The Ministry of Health Gazette link on `cdsco.gov.in` returned HTTP 404. User instructed: *"gazzete page gives 404. (remove that)"*.
+  3. *Screenshot 2 & Idea*: User pointed to the `Search` bar on `cdscoonline.gov.in/CDSCO/cdscoDrugs` and advised: *"we have the form_id and one more id and we can input that into search option of sugam. and get referenced files. give it a try"*.
+* **Root Cause & Technical Audit**:
+  1. `loadDrugApprovals` is an internal AJAX DataTables endpoint intended for consumption by SUGAM's frontend scripts, not direct human browser viewing. Opening it directly dumped raw JSON text.
+  2. The Ministry of Health Opencms server frequently resets URL paths and blocks direct external referrers, resulting in 404s.
+  3. Searching by `form_id` (e.g. `54552`, `16`, `159`, `45705`) directly into SUGAM's `inpSearchBar` is 100% supported by CDSCO's backend, immediately matching `num_form_id` and pulling up the authentic clearance card on the live government portal.
+  4. Every single record (5,139 approvals) in our database contains both `form_id` and `division_id` (e.g. Division 1 for Biologicals, Division 9 for New Drugs, Division 10 for FDC, Division 8 for SND).
+* **Choice & Architecture**:
+  1. **Complete Removal of Broken/Messy Actions**:
+     - Removed `modalGovRecordLink` (raw JSON dump) and `modalGovGazetteLink` (404 Gazette link) from both HTML and JavaScript.
+  2. **Streamlined Verification Suite (`.modal-provenance`)**:
+     - **Prominent Primary Action (`Verify on Government SUGAM Portal ↗`)**: When clicked, automatically copies the filing **Form ID** (e.g., `#54552`) to the clipboard, pops up an instant toast (*"Copied Form ID #54552 to clipboard! Paste into SUGAM search box."*), and opens `https://cdscoonline.gov.in/CDSCO/cdscoDrugs` in a new tab.
+     - **Quick-Copy Identifier Chips**: Provides dedicated copy buttons for `Copy Form ID (#<id>)` and `Copy Drug Name`.
+     - **Division Tag**: Displays official CDSCO stream tag (e.g. `Division 1 (Biologicals)`, `Division 10 (Fixed Dose Combination)`).
+     - **Interactive User Guidance**: Displays clear instruction text: *"💡 Paste the copied Form ID into SUGAM's Search box to view the original clearance record."*
+  3. **Cache Busting**: Bumped asset versions to `?v=3.7` in `public/index.html`.
 * **Verification**:
-  - Live server on port 8000 verified: HTML serves `modalGovRecordLink`, `modalGovPortalBtn`, and `modalGovGazetteLink` with `v=3.6`.
-  - Database verification: 0 cross-tagging collisions across 5,139 records; 128 records under `Dr. Reddy's Laboratories`, 21 under `Sandoz`, 172 under `MSN Laboratories`.
-* **Why this option won**: Directly addresses the limitations of the Indian government's legacy portal architecture while giving regulatory professionals both instant raw proof and a 1-click assisted search on the official portal.
+  - Live server on port 8000 verified: 0 occurrences of Gazette and loadDrugApprovals in `index.html`; `modalGovPortalBtn` and `modalCopyFormIdBtn` properly rendered.
+  - Server returning HTTP 200 with cache buster `v=3.7`.
+* **Why this option won**: Replaces broken and technical dumps with a clean, executive-ready verification flow that leverages official CDSCO SUGAM search behavior seamlessly.
 
 
