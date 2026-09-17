@@ -24,7 +24,8 @@ COMPANY_RULES = [
     # 3. Top MNCs (Use word boundaries to prevent false substring matches)
     (r'\bastrazeneca\b', "AstraZeneca"),
     (r'\broche\b|\bgenentech\b|\bchugai\b', "Roche"),
-    (r'\bnovartis\b|\bsandoz\b', "Novartis"),
+    (r'\bsandoz\b', "Sandoz"),
+    (r'\bnovartis\b', "Novartis"),
     (r'\bpfizer\b|\bupjohn\b', "Pfizer"),
     (r'\bsanofi\b|\baventis\b', "Sanofi"),
     (r'\bmsd\b|\bmerck sharp\b', "MSD Pharma"),
@@ -54,7 +55,7 @@ COMPANY_RULES = [
     (r'\bmerck\b', "Merck Group"),
 
     # 4. Top Indian Pharma Majors & Groups
-    (r'\bdr\.?\s*reddy\b', "Dr. Reddy's Laboratories"),
+    (r'\bdr\.?\s*reddys?\b|\breddys?\b', "Dr. Reddy's Laboratories"),
     (r'\bsun pharma\b|\bsun pharmaceutical\b', "Sun Pharma"),
     (r'\bcipla\b', "Cipla"),
     (r'\bzydus\b|\bcadila healthcare\b', "Zydus Lifesciences"),
@@ -170,9 +171,15 @@ COMPANY_RULES = [
     (r'\btil\b|\btransgene\b', "Transgene Biotek"),
     (r'\bvenus remedies\b', "Venus Remedies"),
     (r'\bwallace\b', "Wallace Pharmaceuticals"),
-    (r'\byarrow\b', "Yarrow Chem Products"),
     (r'\bzeno\b', "Zeno Health"),
-    (r'\bzuventus\b', "Zuventus Healthcare")
+    (r'\bzuventus\b', "Zuventus Healthcare"),
+    (r'\benzene\b', "Enzene Biosciences"),
+    (r'\bcopmed\b', "Copmed Pharmaceuticals"),
+    (r'\beast african\b', "East African (India) Overseas"),
+    (r'\bindian immunologicals?\b', "Indian Immunologicals"),
+    (r'\bkenko\b', "Kenko"),
+    (r'\beastern chemicals\b', "Eastern Chemicals"),
+    (r'\bsidmak\b', "Sidmak Laboratories (India)")
 ]
 
 def standardize_company_name(comp):

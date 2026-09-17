@@ -492,10 +492,36 @@ This document chronicles all pivotal architectural, technical, product scoping, 
      - Ran `data_pipeline/standardize_companies.py` across all 5,139 rows in `cdsco_approvals.db`.
      - Reduced distinct `company_std` values from 425 to 402 clean canonical names, with exactly 0 `M/s` prefixes remaining.
      - Updated `data_pipeline/enrich_database.py` and `SCHEMA_PROMPT` in `app.py`.
+---
+
+### Decision 30: Comprehensive Company Cross-Tagging Audit and Exact Government Portal Verification Actions
+* **Date**: 2026-09-17
+* **Context**: User raised two specific operational requirements:
+  1. *"please cross check all the company names and make sure if company is not wrongly tagged to a different company"*
+  2. *"jab koi entry ka dialogue box khula hota toh usme verify on government portal ka button hai, but that button takes us to the home page. can it take us to the exact page on thewebsite instead of home page"*
+* **Root Cause & Architectural Audit**:
+  1. **Company Cross-Tagging Audit**:
+     - Audited all 460 raw applicant company names against 402 canonical entities.
+     - Found that `Dr Reddys Laboratories` (94 records) and `Dr. Reddys Laboratories` (34 records) were split because of a regex word boundary matching `reddy` vs `reddys`. Unified them into `"Dr. Reddy's Laboratories"` (128 total records).
+     - Separated `Sandoz` (21 records) from `Novartis` so generic and biosimilar filings are accurately attributed to Sandoz rather than innovator Novartis.
+     - Cleaned trailing punctuation artifacts: `Enzene Biosciences., Pune` -> `Enzene Biosciences` (89 records), `Copmed Pharmaceuticals.. Unit-III` -> `Copmed Pharmaceuticals`, `East African (India) Overseas (Unit-II)` -> `East African (India) Overseas`, `Indian Immunological` -> `Indian Immunologicals`.
+     - Confirmed that Metrochem API (17 records) is cleanly separated from Roche, MSN Group (172 records) is unified, and Shilpa (48 records) is unified.
+     - Validated with `verify_rules_accuracy.py` across all 173 rule matches: exactly 0 false cross-taggings found.
+  2. **Government Portal Landing Page vs. Exact Record**:
+     - The official CDSCO online search portal (`https://cdscoonline.gov.in/CDSCO/cdscoDrugs`) is an AJAX Single Page Application (JSP + jQuery DataTables). It does not maintain distinct permalinks per drug and ignores query parameters in `window.location.search`. Loading the URL opened the blank search form, which felt like a "home page" to the user.
+     - However, the underlying live government endpoint (`https://cdscoonline.gov.in/CDSCO/loadDrugApprovals?searchText=<drug>&year=<year>&month=&drugTypeValue=`) returns the exact government registration JSON record with Form ID, applicant company, composition, and indication.
+     - Furthermore, the official CDSCO gazette repository on `cdsco.gov.in` provides official approval circular lists (`/Approvals/List-of-Approved-New-Drugs/` and `/Approvals/List-of-FDC-Subsequent-New-Drugs/`).
+* **Choice & Architecture**:
+  1. **Multi-Action Government Verification Suite in Modal (`.prov-actions`)**:
+     - **Action 1 (Live SUGAM Record ↗)**: Emerald badge linking directly to the authentic live government query URL with the exact molecule name and approval year (`https://cdscoonline.gov.in/CDSCO/loadDrugApprovals?searchText=${term}&year=${year}`). This immediately reveals the official backend record.
+     - **Action 2 (Search on CDSCO Portal ↗)**: Cyan button that automatically copies the clean molecule name to the user's clipboard, triggers a toast notification (*"Copied '<molecule>' to clipboard! Paste into CDSCO search box."*), and opens `https://cdscoonline.gov.in/CDSCO/cdscoDrugs` in a new tab for frictionless verification.
+     - **Action 3 (Official Gazette ↗)**: Amber badge linking to the official CDSCO Ministry of Health gazette approval lists, automatically routing between New Drugs and FDC circulars based on the formulation category.
+  2. **Styling & Cache Busting**:
+     - Implemented `.prov-actions` with modern CSS badge variants (`.prov-link-live`, `.prov-link-portal`, `.prov-link-gazette`) and responsive wrapping.
+     - Bumped script and stylesheet cache busters to `?v=3.6` in `public/index.html`.
 * **Verification**:
-  - Queried `GET /api/search?q=MSN`: all 172 approvals return unified `company_std: "MSN Laboratories"`.
-  - Queried `GET /api/search?q=Metrochem`: all 17 approvals return unified `company_std: "Metrochem API"`.
-  - Verified 0 remaining `M/s` prefixes in `cdsco_approvals.db`.
-* **Why this option won**: Cleans and unifies corporate intelligence across analytics tables, dropdown filters, AI synthesis, and molecule cards without losing raw regulatory traceability (preserved in `company` column).
+  - Live server on port 8000 verified: HTML serves `modalGovRecordLink`, `modalGovPortalBtn`, and `modalGovGazetteLink` with `v=3.6`.
+  - Database verification: 0 cross-tagging collisions across 5,139 records; 128 records under `Dr. Reddy's Laboratories`, 21 under `Sandoz`, 172 under `MSN Laboratories`.
+* **Why this option won**: Directly addresses the limitations of the Indian government's legacy portal architecture while giving regulatory professionals both instant raw proof and a 1-click assisted search on the official portal.
 
 
