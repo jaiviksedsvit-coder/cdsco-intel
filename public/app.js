@@ -265,6 +265,7 @@ function setupEvents() {
 
   // Bottom Sticky Chat Input (if present)
   if (bottomChatInput) {
+    bottomChatInput.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
         const val = bottomChatInput.value.trim();
@@ -274,6 +275,7 @@ function setupEvents() {
           bottomChatInput.style.height = "auto";
         }
       }
+    });
 
     bottomChatInput.addEventListener("input", () => {
       bottomChatInput.style.height = "auto";
