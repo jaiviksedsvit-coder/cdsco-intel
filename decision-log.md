@@ -463,5 +463,6 @@ This document chronicles all pivotal architectural, technical, product scoping, 
 * **Verification**:
   - Live server inspected: confirmed server 200 on port 8000.
   - Verified git diff across `public/app.js`, `public/style.css`, and `public/index.html`.
+  - Restored `bottomChatInput.addEventListener("keydown")` listener and bumped script cache buster to `?v=3.5`.
 * **Why this option won**: Delivers an instant, fluid conversational experience matching ChatGPT/Perplexity, where users immediately see their question and the active synthesizing space without any frozen screen or manual scrolling.
 
