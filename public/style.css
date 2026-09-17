@@ -320,25 +320,86 @@ body {
   text-align: center;
 }
 
-.hero-pill-tag {
-  display: inline-flex;
-  align-items: center;
+/* Hero Scope & Regulatory Coverage Disclaimer (Replacing Pharma Commercial Strategy & CI Search pill) */
+.hero-scope-disclaimer {
+  display: flex;
+  flex-direction: column;
   gap: 8px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-dim);
-  padding: 5px 14px;
-  border-radius: 9999px;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-dim);
-  margin-bottom: 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 12px 18px;
+  margin-bottom: 24px;
+  max-width: 760px;
+  width: 100%;
+  text-align: left;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.25);
+  animation: fadeIn 0.3s ease;
 }
 
-.hero-tag-dot {
+.disclaimer-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  margin-bottom: 2px;
+}
+
+.disclaimer-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--accent-teal);
+}
+
+.disclaimer-badge .disclaimer-icon {
+  stroke: var(--accent-teal);
+  flex-shrink: 0;
+}
+
+.disclaimer-items {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.disclaimer-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+
+.disclaimer-line strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.disclaimer-line .status-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--accent-teal);
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+
+.disclaimer-line .status-dot.live {
+  background: #34d399;
+  box-shadow: 0 0 6px rgba(52, 211, 153, 0.5);
+}
+
+.disclaimer-line .status-dot.planned {
+  background: #fbbf24;
+  box-shadow: 0 0 6px rgba(251, 191, 36, 0.5);
+}
+
+.disclaimer-text {
+  flex: 1;
 }
 
 .hero-title {
@@ -347,21 +408,12 @@ body {
   letter-spacing: -1.2px;
   color: #ffffff;
   line-height: 1.15;
-  margin-bottom: 12px;
+  margin-bottom: 28px;
   font-family: var(--font-sans);
 }
 
 .gradient-text {
   color: var(--accent-teal);
-}
-
-.hero-subtitle {
-  font-size: 16px;
-  color: var(--text-dim);
-  max-width: 580px;
-  margin-bottom: 34px;
-  font-weight: 400;
-  line-height: 1.6;
 }
 
 /* Search Bar (ChatGPT / Perplexity style) */

@@ -415,3 +415,27 @@ This document chronicles all pivotal architectural, technical, product scoping, 
     - Table Row 1: `Vildagliptin Sustained Release Film Coated Tablets 50 Mg (Oros)`, `Wockhardt`, `09-JUL-2020`, with sort indicator `▲`.
   - Tested regression queries: `when was semaglutide approved` (29-JUL-2020), `when was dapagliflozin approved` (03-JUL-2020), and trade brand `enhertu` (correctly resolves to Trastuzumab Deruxtecan).
 * **Why this option won**: Guarantees complete 100% harmony across all three visual areas of the UI and prevents false brand resolution from ever corrupting active drug substances.
+
+---
+
+### Decision 27: Regulatory Scope & Coverage Disclaimer in Place of Commercial Strategy Pill, Subtitle Removal
+* **Date**: 2026-09-17
+* **Context**: User requested transparent scope calibration directly on the homepage:
+  1. Replace the generic "Pharma Commercial Strategy & CI Search" pill with an explicit, authoritative regulatory disclaimer outlining what the platform can search vs. what is out-of-scope for v1 (to be added in the next iteration).
+  2. Specifically itemize unsupported data sources: NPPA ceiling prices / drug pricing notifications, clinical trial registry (CTRI) protocols, Subject Expert Committee (SEC) minutes, and patent litigation.
+  3. Remove the generic tagline "The conversational regulatory search engine for Indian Pharma".
+* **Choice & Architecture**:
+  1. **Hero Scope Disclaimer Component (`public/index.html`, `public/style.css`)**:
+     - Introduced `.hero-scope-disclaimer` structured card in place of the old pill tag.
+     - Divided into two distinct visual status lines:
+       - **What you can search (`.status-dot.live`)**: Official CDSCO SUGAM drug clearances (2018–2026) across active molecules, brand formulations, applicant firms, 24 clinical therapy areas, dosage forms, and approved indications.
+       - **Outside current scope (`.status-dot.planned`)**: NPPA drug pricing & ceiling rates, clinical trial registry (CTRI) data, Subject Expert Committee (SEC) minutes, state licensing files, and patent litigation (targeted for next iteration).
+     - Styled with the platform's neutral dark slate container (`var(--bg-card)`), subtle borders (`var(--border-subtle)`), clean typography (12px Inter), and glowing emerald / amber status indicators.
+  2. **Subtitle Removal & Hero Proportions**:
+     - Deleted `<p class="hero-subtitle">The conversational regulatory search engine for Indian Pharma</p>`.
+     - Adjusted `.hero-title` bottom margin to 28px to establish balanced whitespace between `CDSCO INTEL` and the central search input.
+     - Bumped stylesheet and script cache busters to `?v=3.3`.
+* **Verification**:
+  - Live server inspected: Verified `.hero-scope-disclaimer` renders with both live coverage and planned next iteration items.
+  - Verified absence of "Pharma Commercial Strategy" and "The conversational regulatory search engine for Indian Pharma".
+* **Why this option won**: Eliminates user expectation mismatch by explicitly declaring platform regulatory boundaries upfront, preventing frustration when users search for non-clearance data (like NPPA price controls or CTRI trial phase logs).

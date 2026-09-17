@@ -11,8 +11,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300..700;1,14..32,300..700&family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400..600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   
-  <!-- Stylesheet (v3.2 Cache Busting) -->
-  <link rel="stylesheet" href="/static/style.css?v=3.2">
+  <!-- Stylesheet (v3.3 Cache Busting) -->
+  <link rel="stylesheet" href="/static/style.css?v=3.3">
   
   <!-- Favicon / Minimal Vector Icon -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2320808d' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'/></svg>">
@@ -80,12 +80,30 @@
       <div class="hero-center-box">
         <!-- Logo Branding -->
         <div class="hero-brand-logo">
-          <div class="hero-pill-tag">
-            <span class="hero-tag-dot"></span>
-            <span>Pharma Commercial Strategy &amp; CI Search</span>
+          <!-- Regulatory Scope & Coverage Disclaimer -->
+          <div class="hero-scope-disclaimer" id="heroScopeDisclaimer">
+            <div class="disclaimer-header">
+              <span class="disclaimer-badge">
+                <svg class="disclaimer-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="16" x2="12" y2="12"></line>
+                  <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+                <span>Regulatory Scope &amp; Coverage Disclaimer</span>
+              </span>
+            </div>
+            <div class="disclaimer-items">
+              <div class="disclaimer-line can-search">
+                <span class="status-dot live" title="Live &amp; Searchable in v1"></span>
+                <span class="disclaimer-text"><strong>What you can search:</strong> Official CDSCO SUGAM drug clearances (2018–2026) across active molecules, brand formulations, applicant firms, 24 clinical therapy areas, dosage forms &amp; approved indications.</span>
+              </div>
+              <div class="disclaimer-line cannot-search">
+                <span class="status-dot planned" title="Planned for next iteration"></span>
+                <span class="disclaimer-text"><strong>Outside current scope (adding in next iteration):</strong> NPPA drug pricing &amp; ceiling rates, clinical trial registry (CTRI) data, Subject Expert Committee (SEC) minutes, state licensing files &amp; patent litigation.</span>
+              </div>
+            </div>
           </div>
           <h1 class="hero-title">CDSCO <span class="gradient-text">INTEL</span></h1>
-          <p class="hero-subtitle">The conversational regulatory search engine for Indian Pharma</p>
         </div>
 
         <!-- Central Search Bar -->
@@ -480,7 +498,7 @@
     </div>
   </div>
 
-  <!-- Scripts (v3.2 Cache Busting) -->
-  <script src="/static/app.js?v=3.2"></script>
+  <!-- Scripts (v3.3 Cache Busting) -->
+  <script src="/static/app.js?v=3.3"></script>
 </body>
 </html>
