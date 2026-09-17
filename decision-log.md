@@ -439,3 +439,29 @@ This document chronicles all pivotal architectural, technical, product scoping, 
   - Live server inspected: Verified `.hero-scope-disclaimer` renders with both live coverage and planned next iteration items.
   - Verified absence of "Pharma Commercial Strategy" and "The conversational regulatory search engine for Indian Pharma".
 * **Why this option won**: Eliminates user expectation mismatch by explicitly declaring platform regulatory boundaries upfront, preventing frustration when users search for non-clearance data (like NPPA price controls or CTRI trial phase logs).
+
+---
+
+### Decision 28: Instant Auto-Scroll to Results Generating Space on Bottom Search Bar Queries
+* **Date**: 2026-09-17
+* **Context**: User reported that when submitting a query from the persistent bottom search bar (`#bottomChatInput`), the viewport did not scroll down to the newly appended conversation turn and results generating space. The user was left staring at the previously scrolled position while the backend was actively synthesizing, forcing them to manually scroll to find the new query and generating loader.
+* **Root Cause**:
+  1. `executeSearch` in `public/app.js` appended the user bubble and loading skeleton (`appendUserMessage`, `appendAssistantLoading`) synchronously, but did not trigger any viewport scrolling during search dispatch. Viewport scroll was only attempted *after* the HTTP fetch resolved (1.5–3.5s later) with a short static timeout (`120ms`) using `assistantMsgEl.top - 70`, which also clipped the user's question bubble under the sticky navbar.
+  2. In `public/style.css`, `.chat-turn:last-child` had `padding-bottom: 0;` and lacked a minimum height. When a new turn was added, the document lacked sufficient scroll travel, leaving the generating skeleton pressed at the very bottom or occluded behind the fixed bottom chat dock (`.chat-bottom-dock`, ~110px).
+* **Choice & Architecture**:
+  1. **Instant Auto-Scroll Helper (`scrollToActiveTurn`)**:
+     - Created `scrollToActiveTurn(targetEl, offsetTop = 75)` in `public/app.js` with `requestAnimationFrame` and a 30ms layout settling delay.
+     - Calculates `targetY = scrollTop + rect.top - 75` to provide comfortable 17px clearance below the sticky top navigation (`.top-nav`, ~58px).
+     - Invoked immediately upon query submission so the viewport glides down to the new turn and generating space before the API fetch commences.
+     - Re-invoked post-render (at 80ms) to ensure the question and executive summary remain stably framed below the sticky header when the results table and molecule card expand into the DOM.
+  2. **Generating Turn Minimum Height & Scroll Clearance (`public/style.css`)**:
+     - Configured `min-height: calc(100vh - 240px)` on `.chat-turn:last-child` with `padding-bottom: 60px`. This guarantees the browser always has sufficient vertical scroll room to position the user bubble at the top and the generating space in the upper-middle of the screen.
+     - Added `scroll-margin-top: 80px;` and `scroll-margin-bottom: 140px;` to `.chat-turn` for robust native scroll alignment.
+  3. **Visual Generating State Polish**:
+     - Enhanced `appendAssistantLoading` with a pulsating `.synthesizing-pulse` status dot and shimmering regulatory skeleton lines (`.skeleton-shimmer-wrap`).
+     - Bumped stylesheet and script cache busters to `?v=3.4` in `public/index.html`.
+* **Verification**:
+  - Live server inspected: confirmed server 200 on port 8000.
+  - Verified git diff across `public/app.js`, `public/style.css`, and `public/index.html`.
+* **Why this option won**: Delivers an instant, fluid conversational experience matching ChatGPT/Perplexity, where users immediately see their question and the active synthesizing space without any frozen screen or manual scrolling.
+

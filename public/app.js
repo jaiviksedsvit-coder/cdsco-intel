@@ -265,14 +265,15 @@ function setupEvents() {
 
   // Bottom Sticky Chat Input (if present)
   if (bottomChatInput) {
-    bottomChatInput.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
-        executeSearch(bottomChatInput.value);
-        bottomChatInput.value = "";
-        bottomChatInput.style.height = "auto";
+        const val = bottomChatInput.value.trim();
+        if (val) {
+          executeSearch(val);
+          bottomChatInput.value = "";
+          bottomChatInput.style.height = "auto";
+        }
       }
-    });
 
     bottomChatInput.addEventListener("input", () => {
       bottomChatInput.style.height = "auto";
@@ -353,6 +354,22 @@ function switchToHomeView() {
   heroSearchInput.focus();
 }
 
+// Smoothly scroll viewport to conversation turn (leaving breathing room below sticky top nav)
+function scrollToActiveTurn(targetEl, offsetTop = 75) {
+  if (!targetEl) return;
+  requestAnimationFrame(() => {
+    setTimeout(() => {
+      const rect = targetEl.getBoundingClientRect();
+      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+      const targetY = scrollTop + rect.top - offsetTop;
+      window.scrollTo({
+        top: Math.max(0, targetY),
+        behavior: "smooth"
+      });
+    }, 30);
+  });
+}
+
 // Execute Search & Append Conversation Turn
 async function executeSearch(query) {
   const cleanQ = query.trim();
@@ -369,6 +386,9 @@ async function executeSearch(query) {
 
   // Render Assistant Loading Bubble
   const assistantMsgEl = appendAssistantLoading(turnId);
+
+  // Instantly scroll down so the generating space and user query are in prominent view
+  scrollToActiveTurn(chatThread._activeTurnEl || assistantMsgEl, 75);
 
   // Log Telemetry
   logTelemetry("query_executed", { query: cleanQ, turn_count: appState.turns.length + 1 });
@@ -387,16 +407,10 @@ async function executeSearch(query) {
     // Replace loading with final synthesized response
     renderAssistantResponse(assistantMsgEl, cleanQ, data);
 
-    // Smoothly scroll down so the new turn and results table are prominently visible
+    // Keep the conversation turn framed comfortably below top nav once results render
     setTimeout(() => {
-      const rect = assistantMsgEl.getBoundingClientRect();
-      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-      const targetY = scrollTop + rect.top - 70;
-      window.scrollTo({
-        top: Math.max(0, targetY),
-        behavior: "smooth"
-      });
-    }, 120);
+      scrollToActiveTurn(chatThread._activeTurnEl || assistantMsgEl, 75);
+    }, 80);
 
   } catch (err) {
     console.error("Search query failed:", err);
@@ -437,11 +451,16 @@ function appendAssistantLoading(turnId) {
     <div class="assistant-content">
       <div class="assistant-header">
         <span class="assistant-name">CDSCO Intel</span>
-        <span class="assistant-tag">Synthesizing</span>
+        <span class="assistant-tag synthesizing-pulse">Synthesizing</span>
         <span class="assistant-latency">${ICONS.bolt} Querying 5,139 records...</span>
       </div>
-      <div class="ai-synthesis-text" style="opacity: 0.7;">
-        Searching official SUGAM regulatory records across 24 clinical therapy areas...
+      <div class="ai-synthesis-text" style="opacity: 0.85;">
+        <div style="margin-bottom: 6px;">Searching official SUGAM regulatory records across 24 clinical therapy areas...</div>
+        <div class="skeleton-shimmer-wrap">
+          <div class="skeleton-shimmer-line skeleton-w-full"></div>
+          <div class="skeleton-shimmer-line skeleton-w-85"></div>
+          <div class="skeleton-shimmer-line skeleton-w-65"></div>
+        </div>
       </div>
     </div>
   `;
