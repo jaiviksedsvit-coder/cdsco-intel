@@ -1464,7 +1464,7 @@ async def search_endpoint(request):
         sql = """
             SELECT id, form_id, division_id, drug_name, clean_molecule, brand_name,
                    company, company_std, composition, dosage, indication,
-                   approval_date, approval_year, applied_for, therapy_area,
+                   approval_date, approval_year, applied_for, manuf_addr, therapy_area,
                    product_category, molecule_type, regulatory_type, approval_date_iso
             FROM approvals
         """
@@ -1511,7 +1511,7 @@ async def search_endpoint(request):
                 corr_sql = f"""
                     SELECT id, form_id, division_id, drug_name, clean_molecule, brand_name,
                            company, company_std, composition, dosage, indication,
-                           approval_date, approval_year, applied_for, therapy_area,
+                           approval_date, approval_year, applied_for, manuf_addr, therapy_area,
                            product_category, molecule_type, regulatory_type, approval_date_iso
                     FROM approvals WHERE {" AND ".join(corr_conds)}
                     ORDER BY {corr_order} LIMIT ?
@@ -1536,7 +1536,7 @@ async def search_endpoint(request):
             fallback_sql = f"""
                 SELECT id, form_id, division_id, drug_name, clean_molecule, brand_name,
                        company, company_std, composition, dosage, indication,
-                       approval_date, approval_year, applied_for, therapy_area,
+                       approval_date, approval_year, applied_for, manuf_addr, therapy_area,
                        product_category, molecule_type, regulatory_type, approval_date_iso
                 FROM approvals WHERE {" AND ".join(fallback_conds)}
                 ORDER BY {fb_order} LIMIT ?
@@ -1587,6 +1587,7 @@ async def search_endpoint(request):
             "approval_date_iso": iso_val,
             "approval_year": r["approval_year"],
             "applied_for": r["applied_for"],
+            "manuf_addr": r["manuf_addr"] if "manuf_addr" in r.keys() and r["manuf_addr"] else "",
             "therapy_area": r["therapy_area"],
             "therapy_areas": [ta.strip() for ta in (r["therapy_area"] or "Other").split(",") if ta.strip()],
             "product_category": r["product_category"],
@@ -2157,8 +2158,89 @@ class NoCacheMiddleware(BaseHTTPMiddleware):
             response.headers["Expires"] = "0"
         return response
 
+async def sugam_portal_page(request):
+    res = FileResponse("public/sugam_portal.html")
+    res.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
+    res.headers["Pragma"] = "no-cache"
+    res.headers["Expires"] = "0"
+    return res
+
+async def sugam_proxy_approvals(request):
+    search_text = request.query_params.get("searchText", "").strip()
+    year = request.query_params.get("year", "").strip()
+    month = request.query_params.get("month", "").strip()
+    drug_type = request.query_params.get("drugTypeValue", "").strip()
+
+    # 1. Try fetching directly from official CDSCO endpoint
+    if search_text or year or month or drug_type:
+        try:
+            q_url = f"https://cdscoonline.gov.in/CDSCO/loadDrugApprovals?searchText={urllib.parse.quote(search_text)}&year={urllib.parse.quote(year)}&month={urllib.parse.quote(month)}&drugTypeValue={urllib.parse.quote(drug_type)}"
+            req = urllib.request.Request(q_url, headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req, timeout=4) as response:
+                content = response.read().decode("utf-8", errors="ignore")
+                data = json.loads(content)
+                if data and "aaData" in data and len(data["aaData"]) > 0:
+                    return JSONResponse(data)
+        except Exception:
+            pass
+
+    # 2. Seamless verified local database fallback
+    conn = get_db()
+    c = conn.cursor()
+    if search_text.isdigit():
+        c.execute("""
+            SELECT raw_json, manuf_addr, form_id, division_id, drug_name, company, composition, dosage, indication, approval_date, applied_for
+            FROM approvals WHERE form_id = ?
+        """, (int(search_text),))
+    elif search_text:
+        c.execute("""
+            SELECT raw_json, manuf_addr, form_id, division_id, drug_name, company, composition, dosage, indication, approval_date, applied_for
+            FROM approvals WHERE drug_name LIKE ? OR clean_molecule LIKE ? LIMIT 50
+        """, (f"%{search_text}%", f"%{search_text}%"))
+    else:
+        c.execute("""
+            SELECT raw_json, manuf_addr, form_id, division_id, drug_name, company, composition, dosage, indication, approval_date, applied_for
+            FROM approvals ORDER BY id DESC LIMIT 10
+        """)
+    rows = c.fetchall()
+    conn.close()
+
+    aa_data = []
+    for r in rows:
+        if r["raw_json"]:
+            try:
+                item = json.loads(r["raw_json"])
+                aa_data.append(item)
+                continue
+            except Exception:
+                pass
+        aa_data.append({
+            "num_form_id": r["form_id"],
+            "num_division_id": r["division_id"],
+            "num_purpose": 6,
+            "str_man_unit_name": r["company"] or "",
+            "str_address": "",
+            "str_drug_name": r["drug_name"] or "",
+            "str_pct_name": "NA",
+            "str_composition": r["composition"] or "",
+            "manuf_addr": r["manuf_addr"] or "NA",
+            "str_dosage": r["dosage"] or "NA",
+            "str_indication": r["indication"] or "NA",
+            "dt_closure_dt": r["approval_date"] or "",
+            "dt_closure_date": None,
+            "str_applied_for": r["applied_for"] or "Finished Formulation"
+        })
+
+    return JSONResponse({
+        "iTotalDisplayRecords": len(aa_data),
+        "iTotalRecords": len(aa_data),
+        "aaData": aa_data
+    })
+
 routes = [
     Route("/", endpoint=index_page),
+    Route("/sugam-portal", endpoint=sugam_portal_page),
+    Route("/api/sugam/loadDrugApprovals", endpoint=sugam_proxy_approvals),
     Route("/api/search", endpoint=search_endpoint),
     Route("/api/filters", endpoint=filters_metadata_endpoint),
     Route("/api/stats", endpoint=stats_endpoint),

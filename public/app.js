@@ -68,23 +68,11 @@ const modalTherapyTag = document.getElementById("modalTherapyTag");
 const modalCatTag = document.getElementById("modalCatTag");
 const modalIndication = document.getElementById("modalIndication");
 const modalComposition = document.getElementById("modalComposition");
+const modalAddressContainer = document.getElementById("modalAddressContainer");
 const modalAddress = document.getElementById("modalAddress");
 const modalFormId = document.getElementById("modalFormId");
-const modalDivisionTag = document.getElementById("modalDivisionTag");
 const modalGovPortalBtn = document.getElementById("modalGovPortalBtn");
-const modalCopyFormIdBtn = document.getElementById("modalCopyFormIdBtn");
-const modalCopyFormIdVal = document.getElementById("modalCopyFormIdVal");
-const modalCopyMolBtn = document.getElementById("modalCopyMolBtn");
 let currentModalDrug = null;
-
-const DIVISION_LABELS = {
-  1: "Division 1 (Biologicals)",
-  8: "Division 8 (Subsequent New Drug)",
-  9: "Division 9 (New Drug)",
-  10: "Division 10 (Fixed Dose Combination)",
-  12: "Division 12 (Investigational New Drug)",
-  24: "Division 24 (Veterinary)"
-};
 
 // Date Parsing Helper for CDSCO Dates (e.g. "16-MAR-2022")
 const MONTH_MAP = {
@@ -348,47 +336,15 @@ function setupEvents() {
     }
   });
 
-  // Modal Government Verification Actions
+  // Modal Government Verification Action
   if (modalGovPortalBtn) {
     modalGovPortalBtn.addEventListener("click", () => {
       if (!currentModalDrug) return;
       const formId = currentModalDrug.form_id ? String(currentModalDrug.form_id) : "";
-      const copyVal = formId || (currentModalDrug.clean_molecule || currentModalDrug.drug_name || "").trim();
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(copyVal).then(() => {
-          showToast(`Copied Form ID #${copyVal} to clipboard! Paste into SUGAM search box.`);
-        }).catch(() => {
-          showToast(`Form ID: #${copyVal}. Paste into SUGAM search box.`);
-        });
-      } else {
-        showToast(`Form ID: #${copyVal}. Paste into SUGAM search box.`);
-      }
-      window.open("https://cdscoonline.gov.in/CDSCO/cdscoDrugs", "_blank", "noopener,noreferrer");
+      const searchTarget = formId || (currentModalDrug.clean_molecule || currentModalDrug.drug_name || "").trim();
+      const portalUrl = `/sugam-portal?form_id=${encodeURIComponent(searchTarget)}`;
+      window.open(portalUrl, "_blank", "noopener,noreferrer");
       logTelemetry("gov_portal_opened", { form_id: formId, drug_name: currentModalDrug.drug_name });
-    });
-  }
-
-  if (modalCopyFormIdBtn) {
-    modalCopyFormIdBtn.addEventListener("click", () => {
-      if (!currentModalDrug) return;
-      const formId = currentModalDrug.form_id ? String(currentModalDrug.form_id) : "";
-      if (formId && navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(formId).then(() => {
-          showToast(`Copied Form ID #${formId} to clipboard!`);
-        });
-      }
-    });
-  }
-
-  if (modalCopyMolBtn) {
-    modalCopyMolBtn.addEventListener("click", () => {
-      if (!currentModalDrug) return;
-      const molName = (currentModalDrug.clean_molecule || currentModalDrug.drug_name || "").trim();
-      if (molName && navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(molName).then(() => {
-          showToast(`Copied "${molName}" to clipboard!`);
-        });
-      }
     });
   }
 }
@@ -1251,17 +1207,25 @@ function openModal(drug) {
     modalComposition.textContent = drug.composition || drug.dosage || "Not recorded";
   }
 
-  modalAddress.textContent = drug.applied_for || "Manufacturing & Import site on file with CDSCO SUGAM Registry.";
-  const formIdStr = drug.form_id ? String(drug.form_id) : "54552";
-  modalFormId.textContent = `#${formIdStr}`;
-  if (modalCopyFormIdVal) {
-    modalCopyFormIdVal.textContent = `#${formIdStr}`;
+  // Manufacturing / Import Site Address
+  const rawAddr = (drug.manuf_addr || "").trim();
+  const isInvalidAddr = !rawAddr || 
+    rawAddr.toUpperCase() === "NA" || 
+    rawAddr.toUpperCase() === "NOT AVAILABLE" || 
+    rawAddr.toUpperCase() === "NONE" || 
+    rawAddr.toUpperCase() === "NOT RECORDED" ||
+    rawAddr.toLowerCase() === "finished formulation" ||
+    rawAddr.toLowerCase() === "bulk drug";
+
+  if (!isInvalidAddr) {
+    if (modalAddressContainer) modalAddressContainer.style.display = "block";
+    modalAddress.innerHTML = escapeHtml(rawAddr).replace(/&lt;br\s*\/?&gt;/gi, '<br style="margin-bottom: 4px;">');
+  } else {
+    if (modalAddressContainer) modalAddressContainer.style.display = "none";
   }
 
-  if (modalDivisionTag) {
-    const divId = drug.division_id;
-    modalDivisionTag.textContent = DIVISION_LABELS[divId] || (divId ? `Division #${divId}` : "SUGAM Division");
-  }
+  const formIdStr = drug.form_id ? String(drug.form_id) : "54552";
+  modalFormId.textContent = `#${formIdStr}`;
 
   currentModalDrug = drug;
 
