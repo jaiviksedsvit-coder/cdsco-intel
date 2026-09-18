@@ -567,6 +567,26 @@ This document chronicles all pivotal architectural, technical, product scoping, 
 * **Verification**:
   - Live server on port 8000 verified: `/sugam-portal?form_id=42756` loads HTTP 200 with 2 Ustekinumab records matching Screenshot 2.
   - Detail modal hides address block when address is "NA", and displays real manufacturer address (Baxter/Cilag) when present.
-* **Why this option won**: Completely fulfills the user's vision by eliminating cross-origin browser limitations and delivering an automatic, pre-searched government portal experience with zero manual copy-pasting.
-
-
+### Decision 33: Direct Redirect to Official CDSCO SUGAM Portal with Auto-Copied Form ID (Option A)
+* **Date**: 2026-09-18
+* **Context**: The user explicitly selected Option A: rather than hosting an internal mirror/proxy view of the SUGAM portal, directly open the official government website (`https://cdscoonline.gov.in/CDSCO/cdscoDrugs`) in a new tab, automatically copy the relevant `Form ID` (e.g. `42756`) to the user's clipboard, and present a helpful toast notification instructing them to paste (`Ctrl+V`) into the Search box.
+* **Implementation Details**:
+  1. **Direct Verification Handler (`public/app.js`)**:
+     - Updated `modalGovPortalBtn` click handler:
+       - Extracts `form_id` from `currentModalDrug` (falling back to molecule or drug name if unavailable).
+       - Uses `navigator.clipboard.writeText(...)` to copy the Form ID directly into clipboard.
+       - Dispatches user toast: `Copied Form ID #${copyVal} to clipboard! Paste (Ctrl+V) into SUGAM Search.`
+       - Directs browser to `https://cdscoonline.gov.in/CDSCO/cdscoDrugs` with `window.open(..., "_blank", "noopener,noreferrer")`.
+       - Logs telemetry event `gov_portal_opened`.
+  2. **Modal Provenance Clean-up & Visual Guidance (`public/index.html`)**:
+     - Added `.prov-instruction`: `"💡 Form ID is copied on click. Simply paste (Ctrl+V) into the Search box on the official portal."`
+     - Cleaned out redundant chips and buttons.
+     - Bumped cache busters to `?v=3.9`.
+  3. **Backend & Asset Clean-up (`app.py`, `public/sugam_portal.html`)**:
+     - Removed `/sugam-portal` and `/api/sugam/loadDrugApprovals` routes from `app.py`.
+     - Deleted `public/sugam_portal.html` to eliminate dead code.
+* **Verification**:
+  - Validated `http://localhost:8000/` returns HTTP 200 with cache buster `v=3.9`.
+  - Validated `http://localhost:8000/sugam-portal` returns HTTP 404.
+  - Verified manufacturing site address correctly hides when NA and renders real addresses when present.
+* **Why this option won**: Directly fulfills user preference for official authority verification without custom mirror sites, while overcoming browser Same-Origin Policy through 1-click clipboard assistance.

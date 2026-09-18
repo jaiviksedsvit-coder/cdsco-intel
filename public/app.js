@@ -336,14 +336,24 @@ function setupEvents() {
     }
   });
 
-  // Modal Government Verification Action
+  // Modal Government Verification Action (Option A: Direct redirect to official portal with auto-copied Form ID)
   if (modalGovPortalBtn) {
     modalGovPortalBtn.addEventListener("click", () => {
       if (!currentModalDrug) return;
       const formId = currentModalDrug.form_id ? String(currentModalDrug.form_id) : "";
-      const searchTarget = formId || (currentModalDrug.clean_molecule || currentModalDrug.drug_name || "").trim();
-      const portalUrl = `/sugam-portal?form_id=${encodeURIComponent(searchTarget)}`;
-      window.open(portalUrl, "_blank", "noopener,noreferrer");
+      const copyVal = formId || (currentModalDrug.clean_molecule || currentModalDrug.drug_name || "").trim();
+      
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(copyVal).then(() => {
+          showToast(`Copied Form ID #${copyVal} to clipboard! Paste (Ctrl+V) into SUGAM Search.`);
+        }).catch(() => {
+          showToast(`Form ID: #${copyVal}. Paste into SUGAM Search.`);
+        });
+      } else {
+        showToast(`Form ID: #${copyVal}. Paste into SUGAM Search.`);
+      }
+      
+      window.open("https://cdscoonline.gov.in/CDSCO/cdscoDrugs", "_blank", "noopener,noreferrer");
       logTelemetry("gov_portal_opened", { form_id: formId, drug_name: currentModalDrug.drug_name });
     });
   }
