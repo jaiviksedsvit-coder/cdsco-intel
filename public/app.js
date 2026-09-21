@@ -311,6 +311,16 @@ function setupEvents() {
     navAnalyticsBtn.addEventListener("click", openAnalyticsModal);
   }
 
+  // Regulatory Guide Modal Triggers
+  const navGuideBtn = document.getElementById("navGuideBtn");
+  if (navGuideBtn) {
+    navGuideBtn.addEventListener("click", openGuideModal);
+  }
+  const openFullGuideLink = document.getElementById("openFullGuideLink");
+  if (openFullGuideLink) {
+    openFullGuideLink.addEventListener("click", openGuideModal);
+  }
+
   // Analytics Refresh Button
   const analyticsRefreshBtn = document.getElementById("analyticsRefreshBtn");
   if (analyticsRefreshBtn) {
@@ -333,6 +343,7 @@ function setupEvents() {
     if (e.key === "Escape") {
       closeModal();
       closeAnalyticsModal();
+      closeGuideModal();
     }
   });
 
@@ -525,6 +536,83 @@ function groupApprovals(rows) {
     }
   });
   return Array.from(groups.values());
+}
+
+// Compact Regulatory Glossary & Definitions Box Component
+function renderRegulatoryGlossaryBox() {
+  return `
+    <div class="regulatory-glossary-box">
+      <div class="glossary-header" role="button" tabindex="0" title="Click to collapse/expand definitions">
+        <div class="glossary-title">
+          <span class="glossary-icon">${ICONS.info}</span>
+          <span>Regulatory Classification &amp; Terminology Guide</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <button class="home-guide-modal-link guide-modal-trigger-btn" type="button" style="font-size: 11px; padding: 2px 6px;">Open Full Modal ↗</button>
+          <span class="glossary-toggle-btn">Hide Guide ▲</span>
+        </div>
+      </div>
+      <div class="glossary-content">
+        <div class="glossary-grid">
+          <div class="glossary-item">
+            <div class="glossary-item-badge">
+              <span class="lineage-badge first-in-india">★ Group A: First in India</span>
+            </div>
+            <p class="glossary-item-desc">
+              <strong>Innovator NCE / NBE</strong>: The very first time CDSCO granted clearance for this active molecular substance in India.
+            </p>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-item-badge">
+              <span class="lineage-badge biosimilar">🧬 Group B: Biosimilar</span>
+            </div>
+            <p class="glossary-item-desc">
+              <strong>Similar Biologic</strong>: Biologic follow-on approved under Indian Biosimilar Guidelines with demonstrated similarity to reference biologic.
+            </p>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-item-badge">
+              <span class="lineage-badge generic">💊 Group C: Generic</span>
+            </div>
+            <p class="glossary-item-desc">
+              <strong>Small Molecule Generic</strong>: Bioequivalent copy containing the identical active small molecule and dosage form.
+            </p>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-item-badge">
+              <span class="lineage-badge line-extension">Line Ext · First: YYYY</span>
+            </div>
+            <p class="glossary-item-desc">
+              <strong>Line Extension</strong>: Subsequent filing (new dosage, vial volume, strength, or formulation) for a molecule approved in an earlier year.
+            </p>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-item-badge">
+              <span class="mol-badge biologic">${ICONS.dna} Biologic</span>
+              <span class="mol-badge small-molecule">${ICONS.pill} Small Molecule</span>
+            </div>
+            <p class="glossary-item-desc">
+              <strong>Molecular Class</strong>: Large macromolecule synthesized in living cells (mAbs, vaccines, insulins) vs. chemically synthesized small compound.
+            </p>
+          </div>
+
+          <div class="glossary-item">
+            <div class="glossary-item-badge">
+              <span class="quick-mode-chip active" style="font-size: 10px; padding: 2px 7px; pointer-events: none;">Single</span>
+              <span class="form-badge fdc" style="font-size: 10px;">${ICONS.combo} FDC Combo</span>
+            </div>
+            <p class="glossary-item-desc">
+              <strong>Therapy Mode</strong>: Monotherapy (single active ingredient) vs. Fixed-Dose Combination containing 2+ therapeutic actives combined.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
 }
 
 // Render Full Assistant Response (AI Summary + Molecule Intel + Artifact Table)
@@ -723,6 +811,9 @@ function renderAssistantResponse(blockEl, query, data) {
           ` : ''}
 
           <div class="artifact-actions">
+            <button class="artifact-btn guide-modal-trigger-btn" title="View explanations of Group A/B/C badges, Line Extensions & Classifications">
+              📖 <span>Guide</span>
+            </button>
             <button class="artifact-btn copy-turn-table-btn" title="Copy table formatted for PowerPoint & Google Slides">
               ${ICONS.slides} <span>Slides</span>
             </button>
@@ -802,74 +893,7 @@ function renderAssistantResponse(blockEl, query, data) {
         </div>
 
         <!-- Compact Regulatory Glossary & Definitions Box -->
-        <div class="regulatory-glossary-box">
-          <div class="glossary-header" role="button" tabindex="0" title="Click to collapse/expand definitions">
-            <div class="glossary-title">
-              <span class="glossary-icon">${ICONS.info}</span>
-              <span>Regulatory Classification &amp; Terminology Guide</span>
-            </div>
-            <span class="glossary-toggle-btn">Hide Guide ▲</span>
-          </div>
-          <div class="glossary-content">
-            <div class="glossary-grid">
-              <div class="glossary-item">
-                <div class="glossary-item-badge">
-                  <span class="lineage-badge first-in-india">★ Group A: First in India</span>
-                </div>
-                <p class="glossary-item-desc">
-                  <strong>Innovator NCE / NBE</strong>: The very first time CDSCO granted clearance for this active molecular substance in India.
-                </p>
-              </div>
-
-              <div class="glossary-item">
-                <div class="glossary-item-badge">
-                  <span class="lineage-badge biosimilar">🧬 Group B: Biosimilar</span>
-                </div>
-                <p class="glossary-item-desc">
-                  <strong>Similar Biologic</strong>: Biologic follow-on approved under Indian Biosimilar Guidelines with demonstrated similarity to reference biologic.
-                </p>
-              </div>
-
-              <div class="glossary-item">
-                <div class="glossary-item-badge">
-                  <span class="lineage-badge generic">💊 Group C: Generic</span>
-                </div>
-                <p class="glossary-item-desc">
-                  <strong>Small Molecule Generic</strong>: Bioequivalent copy containing the identical active small molecule and dosage form.
-                </p>
-              </div>
-
-              <div class="glossary-item">
-                <div class="glossary-item-badge">
-                  <span class="lineage-badge line-extension">Line Ext · First: YYYY</span>
-                </div>
-                <p class="glossary-item-desc">
-                  <strong>Line Extension</strong>: Subsequent filing (new dosage, vial volume, strength, or formulation) for a molecule approved in an earlier year.
-                </p>
-              </div>
-
-              <div class="glossary-item">
-                <div class="glossary-item-badge">
-                  <span class="mol-badge biologic">${ICONS.dna} Biologic</span>
-                  <span class="mol-badge small-molecule">${ICONS.pill} Small Molecule</span>
-                </div>
-                <p class="glossary-item-desc">
-                  <strong>Molecular Class</strong>: Large macromolecule synthesized in living cells (mAbs, vaccines, insulins) vs. chemically synthesized small compound.
-                </p>
-              </div>
-
-              <div class="glossary-item">
-                <div class="glossary-item-badge">
-                  <span class="quick-mode-chip active" style="font-size: 10px; padding: 2px 7px; pointer-events: none;">Single</span>
-                  <span class="form-badge fdc" style="font-size: 10px;">${ICONS.combo} FDC Combo</span>
-                </div>
-                <p class="glossary-item-desc">
-                  <strong>Therapy Mode</strong>: Monotherapy (single active ingredient) vs. Fixed-Dose Combination containing 2+ therapeutic actives combined.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
+        ${renderRegulatoryGlossaryBox()}
 
         <div class="turn-action-footer">
           <button class="turn-btn new-search-btn" title="Start a fresh search">${ICONS.plus} New Search</button>
@@ -884,9 +908,10 @@ function renderAssistantResponse(blockEl, query, data) {
         <p style="font-size: 13px; color: var(--text-dim); max-width: 480px; margin: 0 auto 16px;">
           Try searching by active molecule (e.g. "Semaglutide", "Ustekinumab"), standardized company ("Sun Pharma", "AstraZeneca"), or broad therapy area ("Oncology").
         </p>
-        <div class="turn-action-footer" style="justify-content: center; margin-top: 12px;">
+        <div class="turn-action-footer" style="justify-content: center; margin-top: 12px; margin-bottom: 18px;">
           <button class="turn-btn new-search-btn">${ICONS.plus} New Search</button>
         </div>
+        ${renderRegulatoryGlossaryBox()}
       </div>
     `;
   }
@@ -1195,6 +1220,15 @@ function bindArtifactEvents(blockEl, initialResults, data) {
     });
   }
 
+  // Regulatory Guide Modal Triggers (Table Toolbar and Glossary Box)
+  const guideModalTriggers = blockEl.querySelectorAll(".guide-modal-trigger-btn");
+  guideModalTriggers.forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      openGuideModal();
+    });
+  });
+
   // Export CSV Button
   const exportBtn = blockEl.querySelector(".export-csv-btn");
   if (exportBtn) {
@@ -1208,16 +1242,20 @@ function bindArtifactEvents(blockEl, initialResults, data) {
   const newSearchBtns = blockEl.querySelectorAll(".new-search-btn");
   newSearchBtns.forEach(btn => btn.addEventListener("click", switchToHomeView));
 
-  // Regulatory Glossary Box Toggle
-  const glossaryBox = blockEl.querySelector(".regulatory-glossary-box");
-  const glossaryHeader = blockEl.querySelector(".glossary-header");
-  const glossaryToggleBtn = blockEl.querySelector(".glossary-toggle-btn");
-  if (glossaryHeader && glossaryBox && glossaryToggleBtn) {
-    glossaryHeader.addEventListener("click", () => {
-      const isCollapsed = glossaryBox.classList.toggle("collapsed");
-      glossaryToggleBtn.textContent = isCollapsed ? "Show Guide ▼" : "Hide Guide ▲";
-    });
-  }
+  // Regulatory Glossary Box Toggles
+  const glossaryBoxes = blockEl.querySelectorAll(".regulatory-glossary-box");
+  glossaryBoxes.forEach(box => {
+    const header = box.querySelector(".glossary-header");
+    const toggleBtn = box.querySelector(".glossary-toggle-btn");
+    if (header && toggleBtn) {
+      header.addEventListener("click", (e) => {
+        // If clicking a link/button inside header, don't toggle
+        if (e.target.closest("button") || e.target.closest("a")) return;
+        const isCollapsed = box.classList.toggle("collapsed");
+        toggleBtn.textContent = isCollapsed ? "Show Guide ▼" : "Hide Guide ▲";
+      });
+    }
+  });
 }
 
 // Copy Table to Clipboard (Rich HTML Table for Slides & PowerPoint + TSV Fallback)
@@ -1582,6 +1620,24 @@ function closeAnalyticsModal() {
   analyticsModalBackdrop.style.display = "none";
 }
 window.closeAnalyticsModal = closeAnalyticsModal;
+
+// Regulatory Classifications Guide Modal Controller
+const guideModalBackdrop = document.getElementById("guideModalBackdrop");
+
+function openGuideModal() {
+  if (!guideModalBackdrop) return;
+  guideModalBackdrop.style.display = "flex";
+  document.body.style.overflow = "hidden";
+  logTelemetry("guide_opened");
+}
+window.openGuideModal = openGuideModal;
+
+function closeGuideModal() {
+  if (!guideModalBackdrop) return;
+  guideModalBackdrop.style.display = "none";
+  document.body.style.overflow = "";
+}
+window.closeGuideModal = closeGuideModal;
 
 async function fetchAnalytics(isManualRefresh = false) {
   try {

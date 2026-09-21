@@ -354,10 +354,12 @@ def parse_query_intent(query):
         "history", "launch date", "originator"
     ])
 
-    # 1. Detect Therapy Area
+    # 1. Detect Therapy Area (Strict word boundary matching, exclude 'Other')
     matched_synonym = None
     for ta in THERAPY_AREAS:
-        if ta.lower() in q_lower:
+        if ta == "Other":
+            continue
+        if re.search(r'\b' + re.escape(ta.lower()) + r'\b', q_lower):
             extracted_ta = ta
             matched_synonym = ta.lower()
             break

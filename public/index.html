@@ -12,7 +12,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300..700;1,14..32,300..700&family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400..600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   
   <!-- Stylesheet (v4.1 Cache Busting) -->
-  <link rel="stylesheet" href="/static/style.css?v=4.1">
+  <link rel="stylesheet" href="/static/style.css?v=4.2">
   
   <!-- Favicon / Minimal Vector Icon -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2320808d' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'/></svg>">
@@ -54,6 +54,12 @@
           <span class="count" id="totalRecordsCount">5,139</span>
           <span class="label">Verified Records (2018–2026)</span>
         </div>
+        <button class="nav-guide-btn" id="navGuideBtn" title="Regulatory Classifications & Terminology Guide">
+          <svg class="icon-svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line>
+          </svg>
+          <span>Regulatory Guide</span>
+        </button>
         <button class="nav-analytics-btn" id="navAnalyticsBtn" title="Platform Analytics & KPI Pulse">
           <svg class="icon-svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
           <span>Analytics</span>
@@ -155,6 +161,81 @@
             <button class="suggest-pill" data-query="Small molecules in 2026">Small Molecules 2026</button>
             <button class="suggest-pill" data-query="Sun Pharma">Sun Pharma</button>
             <button class="suggest-pill" data-query="Oncology 2025">Oncology 2025</button>
+          </div>
+        </div>
+
+        <!-- Regulatory Classification & Terminology Guide (Homepage Visible Box) -->
+        <div class="home-regulatory-guide-card" id="homeRegulatoryGuide">
+          <div class="home-guide-header">
+            <div class="home-guide-title">
+              <span class="guide-title-icon-svg">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                </svg>
+              </span>
+              <span>Regulatory Classification &amp; Terminology Guide</span>
+            </div>
+            <button class="home-guide-modal-link" id="openFullGuideLink" type="button" title="Open complete guide with detailed regulatory rules">
+              Open Full Modal Guide ↗
+            </button>
+          </div>
+          <div class="glossary-grid" style="margin-top: 10px;">
+            <div class="glossary-item">
+              <div class="glossary-item-badge">
+                <span class="lineage-badge first-in-india">★ Group A: First in India</span>
+              </div>
+              <p class="glossary-item-desc">
+                <strong>Innovator NCE / NBE:</strong> Earliest CDSCO clearance granted for this active molecular substance in India.
+              </p>
+            </div>
+
+            <div class="glossary-item">
+              <div class="glossary-item-badge">
+                <span class="lineage-badge biosimilar">🧬 Group B: Biosimilar</span>
+              </div>
+              <p class="glossary-item-desc">
+                <strong>Similar Biologic:</strong> Biologic follow-on approved under Indian Biosimilar Guidelines with demonstrated similarity.
+              </p>
+            </div>
+
+            <div class="glossary-item">
+              <div class="glossary-item-badge">
+                <span class="lineage-badge generic">💊 Group C: Generic</span>
+              </div>
+              <p class="glossary-item-desc">
+                <strong>Small Molecule Generic:</strong> Bioequivalent copy containing the identical active small molecule and dosage form.
+              </p>
+            </div>
+
+            <div class="glossary-item">
+              <div class="glossary-item-badge">
+                <span class="lineage-badge line-extension">Line Ext · First: YYYY</span>
+              </div>
+              <p class="glossary-item-desc">
+                <strong>Line Extension:</strong> Subsequent filing (new dosage, vial volume, or formulation) for a previously approved molecule.
+              </p>
+            </div>
+
+            <div class="glossary-item">
+              <div class="glossary-item-badge">
+                <span class="mol-badge biologic"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M2 15c6.667-6 13.333 0 20-6"></path><path d="M9 22c1.798-1.998 2.518-3.995 2.807-5.993"></path><path d="M15 2c-1.798 1.998-2.518 3.995-2.807 5.993"></path></svg> Biologic</span>
+                <span class="mol-badge small-molecule"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="9"></circle><line x1="8" y1="12" x2="16" y2="12"></line></svg> Small Molecule</span>
+              </div>
+              <p class="glossary-item-desc">
+                <strong>Molecular Class:</strong> Macromolecules synthesized in living cells (mAbs, insulins) vs. chemically synthesized small compounds.
+              </p>
+            </div>
+
+            <div class="glossary-item">
+              <div class="glossary-item-badge">
+                <span class="quick-mode-chip active" style="font-size: 10px; padding: 2px 7px; pointer-events: none;">Single</span>
+                <span class="form-badge fdc" style="font-size: 10px;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg> FDC Combo</span>
+              </div>
+              <p class="glossary-item-desc">
+                <strong>Therapy Mode:</strong> Monotherapy (single active ingredient) vs. Fixed-Dose Combination containing 2+ therapeutic actives combined.
+              </p>
+            </div>
           </div>
         </div>
 
@@ -512,7 +593,156 @@
     </div>
   </div>
 
-  <!-- Scripts (v4.1 Cache Busting) -->
-  <script src="/static/app.js?v=4.1"></script>
+  <!-- Regulatory Classifications & Terminology Guide Modal -->
+  <div class="modal-backdrop" id="guideModalBackdrop" style="display: none;" onclick="if(event.target===this)closeGuideModal()">
+    <div class="modal-card guide-modal-card" id="guideModalCard">
+      <div class="modal-header guide-modal-header">
+        <div class="guide-header-title-group">
+          <div class="guide-title-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+            </svg>
+          </div>
+          <div>
+            <h3 class="modal-title" style="margin: 0; font-size: 17px; font-weight: 700; color: #fff;">CDSCO Regulatory Classification &amp; Terminology Guide</h3>
+            <span class="guide-header-sub">Official Indian regulatory taxonomy, lineage distinctions, and badging rules</span>
+          </div>
+        </div>
+        <div class="modal-header-actions">
+          <button class="modal-close-btn" onclick="closeGuideModal()" aria-label="Close guide modal" title="Close (Esc)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="modal-body guide-modal-body">
+        <div class="guide-cards-grid">
+          <!-- Card 1: Group A -->
+          <div class="guide-card">
+            <div class="guide-card-top">
+              <span class="lineage-badge first-in-india" style="font-size: 11px;">★ Group A: First in India</span>
+              <span class="guide-tag">Innovator NCE / NBE</span>
+            </div>
+            <h4 class="guide-card-title">First Clearance of a New Molecular Entity</h4>
+            <p class="guide-card-text">
+              The very first time CDSCO granted clearance for this active molecular substance in India. Represents novel innovator drugs (New Chemical Entities or New Biological Entities) introducing new therapeutic mechanisms to the country.
+            </p>
+            <div class="guide-card-meta">
+              <span class="guide-meta-label">Regulatory Basis:</span>
+              <span class="guide-meta-val">New Drug Clearance (Form 45 / Form 46) under New Drugs and Clinical Trials Rules (NDCT 2019).</span>
+            </div>
+            <div class="guide-card-example">
+              <span class="guide-ex-label">Example:</span>
+              <span class="guide-ex-val">First approval of Semaglutide or first novel targeted oncology antibody.</span>
+            </div>
+          </div>
+
+          <!-- Card 2: Group B -->
+          <div class="guide-card">
+            <div class="guide-card-top">
+              <span class="lineage-badge biosimilar" style="font-size: 11px;">🧬 Group B: Biosimilar</span>
+              <span class="guide-tag">Similar Biologic</span>
+            </div>
+            <h4 class="guide-card-title">Follow-on Biologics in India</h4>
+            <p class="guide-card-text">
+              Biologics approved under India's Guidelines on Similar Biologics. These are follow-on biologics with demonstrated similarity in physicochemical structure, safety, and efficacy to an already approved innovator reference biologic.
+            </p>
+            <div class="guide-card-meta">
+              <span class="guide-meta-label">Regulatory Basis:</span>
+              <span class="guide-meta-val">Approved with extensive comparative quality and clinical comparability characterization.</span>
+            </div>
+            <div class="guide-card-example">
+              <span class="guide-ex-label">Example:</span>
+              <span class="guide-ex-val">Biosimilar Trastuzumab, Adalimumab, Rituximab, Bevacizumab.</span>
+            </div>
+          </div>
+
+          <!-- Card 3: Group C -->
+          <div class="guide-card">
+            <div class="guide-card-top">
+              <span class="lineage-badge generic" style="font-size: 11px;">💊 Group C: Generic</span>
+              <span class="guide-tag">Small Molecule Generic</span>
+            </div>
+            <h4 class="guide-card-title">Bioequivalent Small Molecule Copies</h4>
+            <p class="guide-card-text">
+              Chemically synthesized bioequivalent formulations containing the identical active pharmaceutical ingredient (API) in the same dosage form and strength as the innovator reference product.
+            </p>
+            <div class="guide-card-meta">
+              <span class="guide-meta-label">Regulatory Basis:</span>
+              <span class="guide-meta-val">Subsequent clearance backed by bioequivalence (BE) and dissolution profiling.</span>
+            </div>
+            <div class="guide-card-example">
+              <span class="guide-ex-label">Example:</span>
+              <span class="guide-ex-val">Generic Vildagliptin 50mg tablets or generic Apixaban filings.</span>
+            </div>
+          </div>
+
+          <!-- Card 4: Line Extension -->
+          <div class="guide-card">
+            <div class="guide-card-top">
+              <span class="lineage-badge line-extension" style="font-size: 11px;">Line Ext · First: YYYY</span>
+              <span class="guide-tag">Lifecycle Management</span>
+            </div>
+            <h4 class="guide-card-title">Subsequent Dosages &amp; Formulations</h4>
+            <p class="guide-card-text">
+              A subsequent regulatory approval (new dosage strength, new vial presentation, extended-release formulation, or pediatric dosage) for a molecule that was already previously cleared in an earlier calendar year in India.
+            </p>
+            <div class="guide-card-meta">
+              <span class="guide-meta-label">Badge Reading:</span>
+              <span class="guide-meta-val">"First: 2020" signifies the active molecule was first introduced in 2020, and this filing is a later addition.</span>
+            </div>
+            <div class="guide-card-example">
+              <span class="guide-ex-label">Example:</span>
+              <span class="guide-ex-val">New pre-filled pen or sustained-release tablet for an existing molecule.</span>
+            </div>
+          </div>
+
+          <!-- Card 5: Biologic vs Small Molecule -->
+          <div class="guide-card">
+            <div class="guide-card-top">
+              <div style="display: flex; gap: 5px;">
+                <span class="mol-badge biologic" style="font-size: 10px;">🧬 Biologic</span>
+                <span class="mol-badge small-molecule" style="font-size: 10px;">💊 Small Mol</span>
+              </div>
+              <span class="guide-tag">Molecular Classification</span>
+            </div>
+            <h4 class="guide-card-title">Macromolecules vs Chemical Entities</h4>
+            <p class="guide-card-text">
+              <strong>Biologics</strong>: Large, complex macromolecules (monoclonal antibodies, fusion proteins, vaccines, peptides) produced in living cell expression systems.<br>
+              <strong>Small Molecules</strong>: Low-molecular-weight chemical entities (&lt; 900 Da) synthesized by organic chemistry, typically administered orally.
+            </p>
+            <div class="guide-card-example">
+              <span class="guide-ex-label">Examples:</span>
+              <span class="guide-ex-val">Biologic: Durvalumab, Ustekinumab. Small Molecule: Vildagliptin, SGLT2 inhibitors.</span>
+            </div>
+          </div>
+
+          <!-- Card 6: Monotherapy vs Combination -->
+          <div class="guide-card">
+            <div class="guide-card-top">
+              <div style="display: flex; gap: 5px;">
+                <span class="quick-mode-chip active" style="font-size: 10px; padding: 2px 7px; pointer-events: none;">Single</span>
+                <span class="form-badge fdc" style="font-size: 10px;">🧩 FDC Combo</span>
+              </div>
+              <span class="guide-tag">Formulation Structure</span>
+            </div>
+            <h4 class="guide-card-title">Single Active vs Fixed-Dose Combination</h4>
+            <p class="guide-card-text">
+              <strong>Monotherapy (Single)</strong>: Contains exactly one active pharmaceutical ingredient.<br>
+              <strong>Combination (FDC)</strong>: Fixed-Dose Combination containing 2 or more active pharmaceutical ingredients combined in a single finished dosage form.
+            </p>
+            <div class="guide-card-example">
+              <span class="guide-ex-label">Examples:</span>
+              <span class="guide-ex-val">Single: Vildagliptin 50mg. FDC: Vildagliptin + Metformin Hydrochloride tablets.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts (v4.2 Cache Busting) -->
+  <script src="/static/app.js?v=4.2"></script>
 </body>
 </html>
