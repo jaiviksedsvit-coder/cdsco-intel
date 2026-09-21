@@ -801,6 +801,76 @@ function renderAssistantResponse(blockEl, query, data) {
           </table>
         </div>
 
+        <!-- Compact Regulatory Glossary & Definitions Box -->
+        <div class="regulatory-glossary-box">
+          <div class="glossary-header" role="button" tabindex="0" title="Click to collapse/expand definitions">
+            <div class="glossary-title">
+              <span class="glossary-icon">${ICONS.info}</span>
+              <span>Regulatory Classification &amp; Terminology Guide</span>
+            </div>
+            <span class="glossary-toggle-btn">Hide Guide ▲</span>
+          </div>
+          <div class="glossary-content">
+            <div class="glossary-grid">
+              <div class="glossary-item">
+                <div class="glossary-item-badge">
+                  <span class="lineage-badge first-in-india">★ Group A: First in India</span>
+                </div>
+                <p class="glossary-item-desc">
+                  <strong>Innovator NCE / NBE</strong>: The very first time CDSCO granted clearance for this active molecular substance in India.
+                </p>
+              </div>
+
+              <div class="glossary-item">
+                <div class="glossary-item-badge">
+                  <span class="lineage-badge biosimilar">🧬 Group B: Biosimilar</span>
+                </div>
+                <p class="glossary-item-desc">
+                  <strong>Similar Biologic</strong>: Biologic follow-on approved under Indian Biosimilar Guidelines with demonstrated similarity to reference biologic.
+                </p>
+              </div>
+
+              <div class="glossary-item">
+                <div class="glossary-item-badge">
+                  <span class="lineage-badge generic">💊 Group C: Generic</span>
+                </div>
+                <p class="glossary-item-desc">
+                  <strong>Small Molecule Generic</strong>: Bioequivalent copy containing the identical active small molecule and dosage form.
+                </p>
+              </div>
+
+              <div class="glossary-item">
+                <div class="glossary-item-badge">
+                  <span class="lineage-badge line-extension">Line Ext · First: YYYY</span>
+                </div>
+                <p class="glossary-item-desc">
+                  <strong>Line Extension</strong>: Subsequent filing (new dosage, vial volume, strength, or formulation) for a molecule approved in an earlier year.
+                </p>
+              </div>
+
+              <div class="glossary-item">
+                <div class="glossary-item-badge">
+                  <span class="mol-badge biologic">${ICONS.dna} Biologic</span>
+                  <span class="mol-badge small-molecule">${ICONS.pill} Small Molecule</span>
+                </div>
+                <p class="glossary-item-desc">
+                  <strong>Molecular Class</strong>: Large macromolecule synthesized in living cells (mAbs, vaccines, insulins) vs. chemically synthesized small compound.
+                </p>
+              </div>
+
+              <div class="glossary-item">
+                <div class="glossary-item-badge">
+                  <span class="quick-mode-chip active" style="font-size: 10px; padding: 2px 7px; pointer-events: none;">Single</span>
+                  <span class="form-badge fdc" style="font-size: 10px;">${ICONS.combo} FDC Combo</span>
+                </div>
+                <p class="glossary-item-desc">
+                  <strong>Therapy Mode</strong>: Monotherapy (single active ingredient) vs. Fixed-Dose Combination containing 2+ therapeutic actives combined.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div class="turn-action-footer">
           <button class="turn-btn new-search-btn" title="Start a fresh search">${ICONS.plus} New Search</button>
         </div>
@@ -1137,6 +1207,17 @@ function bindArtifactEvents(blockEl, initialResults, data) {
   // Turn Action Buttons (New Search)
   const newSearchBtns = blockEl.querySelectorAll(".new-search-btn");
   newSearchBtns.forEach(btn => btn.addEventListener("click", switchToHomeView));
+
+  // Regulatory Glossary Box Toggle
+  const glossaryBox = blockEl.querySelector(".regulatory-glossary-box");
+  const glossaryHeader = blockEl.querySelector(".glossary-header");
+  const glossaryToggleBtn = blockEl.querySelector(".glossary-toggle-btn");
+  if (glossaryHeader && glossaryBox && glossaryToggleBtn) {
+    glossaryHeader.addEventListener("click", () => {
+      const isCollapsed = glossaryBox.classList.toggle("collapsed");
+      glossaryToggleBtn.textContent = isCollapsed ? "Show Guide ▼" : "Hide Guide ▲";
+    });
+  }
 }
 
 // Copy Table to Clipboard (Rich HTML Table for Slides & PowerPoint + TSV Fallback)

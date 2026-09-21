@@ -617,3 +617,26 @@ This document chronicles all pivotal architectural, technical, product scoping, 
   - Validated `"Oncology Finished Formulations"` returns 571 matches with zero headline hijacking.
   - Validated Daratumumab 2026 record is clearly labeled as `Line Ext · First: 2020`.
 
+### Decision 35: Compact Regulatory Glossary & Definitions Box Below Search Results
+* **Date**: 2026-09-21
+* **Context**: User requested a small and concise glossary box below search results to clearly explain the various regulatory classifications, badges, and terminology so users understand what each badge means without confusion.
+* **Implementation Details**:
+  1. **Glossary Card Structure (`public/app.js`, `public/style.css`)**:
+     - Embedded a `.regulatory-glossary-box` below the approvals table wrap with a collapsible header (`Hide Guide ▲` / `Show Guide ▼`).
+     - Structured a 6-item responsive grid:
+       - **★ Group A: First in India**: Innovator NCE/NBE — very first time CDSCO granted clearance for this active molecular substance in India.
+       - **🧬 Group B: Biosimilar**: Similar Biologic — biologic follow-on approved under Indian Biosimilar Guidelines with demonstrated similarity to reference biologic.
+       - **💊 Group C: Generic**: Small Molecule Generic — bioequivalent copy containing identical active small molecule and dosage form.
+       - **Line Ext · First: YYYY**: Line Extension — subsequent filing (new dosage, vial volume, strength, or formulation) for a molecule approved in an earlier year.
+       - **Biologic vs. Small Molecule**: Molecular Modality — large macromolecules synthesized in living cells (mAbs, vaccines, insulins) vs. chemically synthesized small compounds.
+       - **Single vs. FDC Combo**: Therapy Mode — monotherapy (single active ingredient) vs. Fixed-Dose Combination containing 2+ therapeutic actives combined.
+     - Each item displays the exact color-coded badge used in table rows alongside its authoritative definition.
+  2. **Interactive Toggle Handler (`public/app.js`)**:
+     - Smooth click handler on `.glossary-header` that toggles `.collapsed` class and flips toggle button text.
+  3. **Cache Busting**:
+     - Bumped asset version to `v=4.1` in `public/index.html`.
+* **Verification**:
+  - Validated local server on port 8000 loads `style.css?v=4.1` and `app.js?v=4.1` with HTTP 200.
+  - Verified toggle button smoothly collapses and expands the glossary box.
+
+
