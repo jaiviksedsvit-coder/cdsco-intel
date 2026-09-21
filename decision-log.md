@@ -590,3 +590,30 @@ This document chronicles all pivotal architectural, technical, product scoping, 
   - Validated `http://localhost:8000/sugam-portal` returns HTTP 404.
   - Verified manufacturing site address correctly hides when NA and renders real addresses when present.
 * **Why this option won**: Directly fulfills user preference for official authority verification without custom mirror sites, while overcoming browser Same-Origin Policy through 1-click clipboard assistance.
+
+### Decision 34: 4-Group Regulatory Taxonomy Framework, Temporal Range Parsing ("since 2020"), and Molecular Lineage Engine
+* **Date**: 2026-09-21
+* **Context**: User queried *"how many new molecules have been approved since 2020"* and noticed earlier clearances (e.g. Daratumumab approved in 2020) appearing under 2026 searches without clear lineage distinction. Furthermore, broad queries like "Oncology Finished Formulations" previously suffered from headline hijacking. The user requested an industry-standard 4-group regulatory classification:
+  - **Group A**: Absolutely New Molecule (First in India / Innovator NCE & NBE)
+  - **Group B**: Biosimilars (Biologic follow-ons)
+  - **Group C**: Generics (Small molecule copies)
+  - **Group D**: All Clearances (Total filings including line extensions & strengths)
+  integrated alongside the existing Biologics vs Small Molecules classification toggle.
+* **Implementation Details**:
+  1. **Backend Lineage & Taxonomy Engine (`app.py`)**:
+     - `_init_molecule_lineage`: Precomputed earliest Indian approval date (`first_date_iso`, `first_year`) for all 1,477 distinct molecules across 5,139 approvals.
+     - `parse_query_intent`: Added regex for temporal ranges (`since`, `from`, `after`, `between`) mapping to `min_year` and `max_year`, and regulatory group intent detection (`new_molecule`, `biosimilar`, `generic`).
+     - `get_regulatory_taxonomy_stats`: High-performance SQLite CTE computing dynamic 4-group distribution across any timeframe, clinical area, or manufacturer.
+     - `generate_analytical_summary`: Directly answers questions on new molecules approved since 2020 with the exact Group A count (1,009 distinct molecules) and multi-tier breakdown (Group A: 1,009 distinct molecules across 1,362 clearances; Group B: 60 distinct molecules across 267 clearances; Group C: 353 distinct small molecules across 2,403 clearances; Group D: 4,916 total clearances).
+     - Elevated query limit to 6,000 to eliminate arbitrary 2,500 truncation on multi-year searches.
+     - Each result row tagged with `approval_group_code`, `approval_group_label`, `regulatory_type`, and `is_first_in_india`.
+  2. **Frontend UI & Table Toolbar (`public/app.js`, `public/style.css`, `public/index.html`)**:
+     - Upgraded the table toolbar dropdown filter to `Regulatory Group`: `All Clearances (Group D)`, `★ Group A: New Molecules (First in India)`, `🧬 Group B: Biosimilars`, `💊 Group C: Generics`.
+     - Added distinctive color-coded badges: Emerald for Group A, Cyan for Group B, Amber for Group C, and Slate for Line Extensions (`Line Ext · First: YYYY`).
+     - Master Dossier modal displays the full 4-group classification.
+     - Cache busters bumped to `?v=4.0`.
+* **Verification**:
+  - Validated `"how many new molecules have been approved since 2020"` returns exactly 1,009 matches and 4-tier summary.
+  - Validated `"Oncology Finished Formulations"` returns 571 matches with zero headline hijacking.
+  - Validated Daratumumab 2026 record is clearly labeled as `Line Ext · First: 2020`.
+

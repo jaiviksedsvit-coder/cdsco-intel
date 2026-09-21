@@ -763,6 +763,15 @@ function renderAssistantResponse(blockEl, query, data) {
               <option value="Small Molecule">Small Molecule</option>
             </select>
           </div>
+          <div class="filter-group">
+            <label>Regulatory Group</label>
+            <select class="table-filter" data-filter="approval_group_code">
+              <option value="">All Clearances (Group D)</option>
+              <option value="new_molecule">★ Group A: New Molecules (First in India)</option>
+              <option value="biosimilar">🧬 Group B: Biosimilars</option>
+              <option value="generic">💊 Group C: Generics</option>
+            </select>
+          </div>
           <button class="filter-reset-btn" title="Reset all filters">↺ Reset</button>
         </div>
         ` : ''}
@@ -848,6 +857,18 @@ function renderTableRow(r) {
 
   const companyDisplay = r.company_std || r.company || "Not specified";
 
+  // Regulatory Taxonomy Lineage Badge: Group A, B, C or Line Extension
+  let lineageBadge = "";
+  if (r.approval_group_code === "new_molecule" || (r.is_first_in_india && (r.regulatory_type === "Innovator" || !r.regulatory_type))) {
+    lineageBadge = `<span class="lineage-badge first-in-india" title="Group A: New Molecule (First CDSCO clearance for this active substance in India)">★ First in India</span>`;
+  } else if (r.approval_group_code === "biosimilar" || r.regulatory_type === "Biosimilar") {
+    lineageBadge = `<span class="lineage-badge biosimilar" title="Group B: Biosimilar (Follow-on to innovator biologic)">🧬 Biosimilar</span>`;
+  } else if (r.approval_group_code === "generic" || r.regulatory_type === "Generic") {
+    lineageBadge = `<span class="lineage-badge generic" title="Group C: Generic (Small molecule bioequivalent copy)">💊 Generic</span>`;
+  } else if (r.first_approval_year && r.approval_year && r.first_approval_year < r.approval_year) {
+    lineageBadge = `<span class="lineage-badge line-extension" title="Line extension, new strength, or new formulation. Active molecule was first approved in India in ${r.first_approval_year} (Earliest clearance: ${escapeHtml(r.first_approval_date || '')})">Line Ext · First: ${r.first_approval_year}</span>`;
+  }
+
   // Concise Approved Indication Text
   let conciseIndication = (r.indication || "").trim();
   if (!conciseIndication || conciseIndication.toUpperCase() === "NA" || conciseIndication.toUpperCase() === "N/A") {
@@ -889,7 +910,10 @@ function renderTableRow(r) {
         </div>
       </td>
       <td>
-        <span class="date-text">${escapeHtml(r.approval_date || "-")}</span>
+        <div class="date-cell">
+          <span class="date-text">${escapeHtml(r.approval_date || "-")}</span>
+          ${lineageBadge}
+        </div>
       </td>
       <td>
         ${conciseIndication}
@@ -986,6 +1010,18 @@ function bindArtifactEvents(blockEl, initialResults, data) {
       }
       if (activeFilters.approval_year && r.approval_year !== parseInt(activeFilters.approval_year)) return false;
       if (activeFilters.molecule_type && (r.molecule_type || 'Small Molecule') !== activeFilters.molecule_type) return false;
+      if (activeFilters.approval_group_code) {
+        if (activeFilters.approval_group_code === "new_molecule") {
+          const isA = (r.approval_group_code === "new_molecule") || (r.is_first_in_india && (r.regulatory_type === "Innovator" || !r.regulatory_type));
+          if (!isA) return false;
+        } else if (activeFilters.approval_group_code === "biosimilar") {
+          const isB = (r.approval_group_code === "biosimilar") || (r.regulatory_type === "Biosimilar");
+          if (!isB) return false;
+        } else if (activeFilters.approval_group_code === "generic") {
+          const isC = (r.approval_group_code === "generic") || (r.regulatory_type === "Generic");
+          if (!isC) return false;
+        }
+      }
       return true;
     };
 
@@ -1197,6 +1233,21 @@ function openModal(drug) {
   modalDrugName.textContent = drug.drug_name || "Unspecified Drug";
   modalCompany.textContent = `${drug.company_std || drug.company} • ${drug.molecule_type || 'Small Molecule'}`;
   modalDate.textContent = drug.approval_date || "Unknown Date";
+
+  const modalLineage = document.getElementById("modalLineage");
+  if (modalLineage) {
+    if (drug.approval_group_code === "new_molecule" || (drug.is_first_in_india && (drug.regulatory_type === "Innovator" || !drug.regulatory_type))) {
+      modalLineage.innerHTML = `<span class="lineage-badge first-in-india">★ Group A: New Molecule (First in India)</span> <span style="font-size: 11.5px; color: var(--text-dim); margin-left: 4px;">(Innovator NCE/NBE / First Clearance)</span>`;
+    } else if (drug.approval_group_code === "biosimilar" || drug.regulatory_type === "Biosimilar") {
+      modalLineage.innerHTML = `<span class="lineage-badge biosimilar">🧬 Group B: Biosimilar</span> <span style="font-size: 11.5px; color: var(--text-dim); margin-left: 4px;">(Biologic Follow-on / Similar Biologic)</span>`;
+    } else if (drug.approval_group_code === "generic" || drug.regulatory_type === "Generic") {
+      modalLineage.innerHTML = `<span class="lineage-badge generic">💊 Group C: Generic</span> <span style="font-size: 11.5px; color: var(--text-dim); margin-left: 4px;">(Small Molecule Bioequivalent Copy)</span>`;
+    } else if (drug.first_approval_year && drug.approval_year && drug.first_approval_year < drug.approval_year) {
+      modalLineage.innerHTML = `<span class="lineage-badge line-extension">Line Extension</span> <span style="font-size: 11.5px; color: var(--text-dim); margin-left: 4px;">Substance first approved: <strong>${escapeHtml(drug.first_approval_date || '')}</strong> (${drug.first_approval_year})</span>`;
+    } else {
+      modalLineage.textContent = drug.approval_group_label || drug.regulatory_status || "Standard clearance";
+    }
+  }
   const modalTas = (drug.therapy_areas && drug.therapy_areas.length)
     ? drug.therapy_areas
     : (drug.therapy_area ? drug.therapy_area.split(',').map(s => s.trim()).filter(Boolean) : ['Other']);

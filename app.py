@@ -38,6 +38,42 @@ def _init_known_molecules():
 KNOWN_MOLECULES = _init_known_molecules()
 KNOWN_MOL_MAP = {m.lower(): m for m in KNOWN_MOLECULES}
 
+def _init_molecule_lineage():
+    """Maps each clean_molecule (and drug_name) to its earliest CDSCO clearance date, iso date, and year."""
+    try:
+        conn = get_db()
+        c = conn.cursor()
+        c.execute("""
+            SELECT clean_molecule, MIN(approval_date_iso) as first_iso, MIN(approval_year) as first_yr
+            FROM approvals
+            WHERE clean_molecule IS NOT NULL AND clean_molecule != ''
+            GROUP BY clean_molecule
+        """)
+        lineage = {}
+        for r in c.fetchall():
+            m_key = r[0].strip().lower()
+            lineage[m_key] = {
+                "first_date_iso": r[1],
+                "first_year": int(r[2]) if r[2] else 9999
+            }
+        c.execute("""
+            SELECT clean_molecule, approval_date
+            FROM approvals
+            WHERE clean_molecule IS NOT NULL AND clean_molecule != ''
+            ORDER BY approval_date_iso ASC
+        """)
+        for r in c.fetchall():
+            m_key = r[0].strip().lower()
+            if m_key in lineage and "first_date" not in lineage[m_key]:
+                lineage[m_key]["first_date"] = r[1]
+        conn.close()
+        return lineage
+    except Exception as e:
+        print("[Lineage] Error initializing molecule lineage:", e)
+        return {}
+
+MOLECULE_LINEAGE_MAP = _init_molecule_lineage()
+
 def _seed_baseline_analytics(c):
     seed_queries = [
         ("Semaglutide", None, None, None, 4, 14.2, 0, "analyst_01"),
@@ -350,10 +386,24 @@ def parse_query_intent(query):
             if extracted_ta:
                 break
 
-    # 2. Detect Year
-    m_yr = re.search(r'\b(201[89]|202[0-6])\b', q)
-    if m_yr:
-        extracted_year = int(m_yr.group(1))
+    # 2. Detect Year & Temporal Operators (since, after, from, between)
+    extracted_min_year = None
+    extracted_max_year = None
+    m_between = re.search(r'\b(?:between|from)\s+(201[89]|202[0-6])\s+(?:and|to)\s+(201[89]|202[0-6])\b', q, re.IGNORECASE)
+    m_since = re.search(r'\b(?:since|from|after)\s+(201[89]|202[0-6])\b', q, re.IGNORECASE)
+    m_before = re.search(r'\b(?:before|prior\s+to|until)\s+(201[89]|202[0-6])\b', q, re.IGNORECASE)
+
+    if m_between:
+        extracted_min_year = int(m_between.group(1))
+        extracted_max_year = int(m_between.group(2))
+    elif m_since:
+        extracted_min_year = int(m_since.group(1))
+    elif m_before:
+        extracted_max_year = int(m_before.group(1))
+    else:
+        m_yr = re.search(r'\b(201[89]|202[0-6])\b', q)
+        if m_yr:
+            extracted_year = int(m_yr.group(1))
 
     # 3. Detect Category (Bulk vs Finished)
     if "bulk" in q_lower or ("api" in q_lower and "apis" not in q_lower.replace("bulk apis","")):
@@ -374,6 +424,20 @@ def parse_query_intent(query):
         extracted_mol_type = "Biologic"
     elif re.search(r'\b(small molecule|small molecules)\b', q_lower):
         extracted_mol_type = "Small Molecule"
+
+    # 4c. Detect Regulatory Group Intent (Group A: New Molecule, Group B: Biosimilar, Group C: Generic)
+    extracted_reg_group = None
+    if re.search(r'\b(biosimilar|biosimilars|follow[- ]on biologics?)\b', q_lower):
+        extracted_reg_group = "biosimilar"
+    elif re.search(r'\b(generic|generics|generic drugs?)\b', q_lower):
+        extracted_reg_group = "generic"
+    elif re.search(r'\b(new molecules?|new drug entities?|new chemical entities?|new biological entities?|new substances?|nces?|nbes?|first in india|first approved in india)\b', q_lower):
+        extracted_reg_group = "new_molecule"
+
+    is_molecule_level = bool(
+        extracted_reg_group == "new_molecule" or
+        re.search(r'\b(new molecules?|molecules?|substances?|nces?|nbes?)\b', q_lower)
+    )
 
     # 5. Detect Company (longest alias first to prioritize multi-word matches like 'glenmark pharma')
     for alias in sorted(COMPANY_ALIASES.keys(), key=len, reverse=True):
@@ -440,7 +504,11 @@ def parse_query_intent(query):
         "information on", "information about", "info on", "info about",
         "list of all", "list of", "list all", "list the",
         "what do you know about", "what do you have on",
+        "how many new molecules have been approved since", "how many new molecules have been approved in",
+        "how many new molecules were approved since", "how many new molecules were approved in",
+        "how many new molecules", "how many molecules", "how many biosimilars", "how many generics",
         "approvals for", "approvals in", "approvals of", "approved in", "approved for",
+        "approved since", "approved after", "approved from",
         "first launched in india", "launched in india", "launches in india",
         "launces in india", "launch in india", "available in india", "cleared in india",
         "in india", "in indian", "indian market",
@@ -451,7 +519,15 @@ def parse_query_intent(query):
         "therapy area", "therapy areas"
     ]
     # Strip molecule type phrases using strict word boundaries first
-    clean_q = re.sub(r'\b(small\s+molecules?|biologics?)\b', ' ', clean_q, flags=re.IGNORECASE)
+    clean_q = re.sub(r'\b(small\s+molecules?|biologics?|mabs?|monoclonals?)\b', ' ', clean_q, flags=re.IGNORECASE)
+    # Strip category phrases
+    clean_q = re.sub(r'\b(finished\s+formulations?|finished\s+formulation|bulk\s+apis?|bulk\s+api|formulations?|tablets?|injections?|finished|bulk|apis?)\b', ' ', clean_q, flags=re.IGNORECASE)
+    # Strip formulation mode phrases
+    clean_q = re.sub(r'\b(monotherapy|single\s+molecules?|single\s+agent|combinations?|fixed[- ]dose\s+combinations?|fdcs?|combos?)\b', ' ', clean_q, flags=re.IGNORECASE)
+    # Strip temporal phrases
+    clean_q = re.sub(r'\b(since|after|between|until|prior\s+to|from)\s+(201[89]|202[0-6])\b', ' ', clean_q, flags=re.IGNORECASE)
+    # Strip group terms
+    clean_q = re.sub(r'\b(new\s+molecules?|new\s+substances?|new\s+drugs?|new\s+chemical\s+entities?|new\s+biological\s+entities?|first\s+in\s+india|biosimilars?|generics?)\b', ' ', clean_q, flags=re.IGNORECASE)
 
     # Sort phrase fillers longest-first to prevent partial truncation
     for f in sorted(phrase_fillers, key=len, reverse=True):
@@ -481,6 +557,10 @@ def parse_query_intent(query):
         "list", "latest", "recent", "new", "old", "current", "status",
         "first", "date", "dates", "year", "years", "molecule", "molecules",
         "therapy", "area", "areas", "type", "category", "small", "biologic", "biologics",
+        "finished", "formulation", "formulations", "bulk", "api", "apis",
+        "monotherapy", "combination", "combinations", "combo", "combos", "fdc", "fdcs",
+        "tablet", "tablets", "injection", "injections",
+        "since", "after", "between", "until", "prior", "strictly", "firstly",
         "seen", "saw", "highest", "most", "lowest", "least", "maximum", "minimum",
         "more", "less", "greatest", "largest", "smallest", "rank", "ranking",
         "s"
@@ -493,6 +573,16 @@ def parse_query_intent(query):
         clean_q = re.sub(r'\b' + re.escape(matched_synonym) + r'\b', ' ', clean_q, flags=re.IGNORECASE)
     if extracted_year:
         clean_q = re.sub(r'\b' + str(extracted_year) + r'\b', ' ', clean_q)
+    if extracted_min_year:
+        clean_q = re.sub(r'\b' + str(extracted_min_year) + r'\b', ' ', clean_q)
+    if extracted_max_year:
+        clean_q = re.sub(r'\b' + str(extracted_max_year) + r'\b', ' ', clean_q)
+    if extracted_category:
+        clean_q = re.sub(r'\b(finished|formulation|formulations|bulk|api|apis)\b', ' ', clean_q, flags=re.IGNORECASE)
+    if extracted_form_type:
+        clean_q = re.sub(r'\b(monotherapy|single|combination|combinations|fdc|fixed|dose|combo|combos)\b', ' ', clean_q, flags=re.IGNORECASE)
+    if extracted_mol_type:
+        clean_q = re.sub(r'\b(biologic|biologics|small|molecule|molecules|mab|monoclonal)\b', ' ', clean_q, flags=re.IGNORECASE)
     if extracted_company:
         for alias, std_name in COMPANY_ALIASES.items():
             if std_name == extracted_company:
@@ -514,10 +604,14 @@ def parse_query_intent(query):
         "clean_text": clean_text,
         "therapy_area": extracted_ta,
         "year": extracted_year,
+        "min_year": extracted_min_year,
+        "max_year": extracted_max_year,
         "company": extracted_company,
         "product_category": extracted_category,
         "molecule_type": extracted_mol_type,
         "formulation_type": extracted_form_type,
+        "regulatory_group": extracted_reg_group,
+        "is_molecule_level": is_molecule_level,
         "is_historical": is_historical_q,
         "historical_match": historical_match,
         "is_greeting": is_greeting,
@@ -923,12 +1017,20 @@ Translation & Mapping Rules:
    - Single / Monotherapy -> (drug_name NOT LIKE '%+%' AND drug_name NOT LIKE '% / %' AND drug_name NOT LIKE 'FDC of %')
 8. Multiple companies (comparisons):
    - e.g. "compare Novartis and Roche" -> company_std IN ('Novartis', 'Roche')
+8b. Temporal ranges:
+   - "since 2020", "from 2020 onwards", "after 2020" -> approval_year >= 2020
+   - "before 2023", "prior to 2023" -> approval_year < 2023
+   - "between 2020 and 2024" -> approval_year BETWEEN 2020 AND 2024
+8c. Regulatory types:
+   - "biosimilar" / "biosimilars" -> regulatory_type = 'Biosimilar'
+   - "generic" / "generics" -> regulatory_type = 'Generic'
+   - "innovator" / "originator" -> regulatory_type = 'Innovator'
 9. Threshold & Ranking queries (e.g. "companies with 5+ approvals in oncology in 2025" or "who has the most approvals in 2024"):
    Do NOT use GROUP BY or HAVING because the analytical layer needs all individual approval rows to display the full interactive table and calculate exact thresholds. Instead, filter by the therapy area, year, and/or dosage:
-   e.g. "which company has 5+ approvals in oncology in 2025" -> SELECT * FROM approvals WHERE therapy_area = 'Oncology' AND approval_year = 2025 ORDER BY approval_date_iso DESC, id DESC LIMIT 2500
+   e.g. "which company has 5+ approvals in oncology in 2025" -> SELECT * FROM approvals WHERE therapy_area = 'Oncology' AND approval_year = 2025 ORDER BY approval_date_iso DESC, id DESC LIMIT 6000
 10. ORDER BY clause:
-   - For historical, first approval, earliest clearance, origin, or launch date queries (e.g. "when was X approved", "first clearance for Y", "earliest approval", "when did X launch"): ORDER BY approval_date_iso ASC, id ASC LIMIT 2500
-   - For all other queries: ORDER BY approval_date_iso DESC, id DESC LIMIT 2500
+   - For historical, first approval, earliest clearance, origin, or launch date queries (e.g. "when was X approved", "first clearance for Y", "earliest approval", "when did X launch"): ORDER BY approval_date_iso ASC, id ASC LIMIT 6000
+   - For all other queries: ORDER BY approval_date_iso DESC, id DESC LIMIT 6000
 11. Only generate read-only SELECT statements. Never generate UPDATE, DELETE, DROP, or INSERT.
 """
 
@@ -950,7 +1052,7 @@ def is_natural_language_human_query(q):
     ]
     return any(t in q_str for t in triggers)
 
-def execute_llm_text_to_sql(user_query, conn, limit=2500):
+def execute_llm_text_to_sql(user_query, conn, limit=6000):
     """Generative NLP-to-SQL powered by Google Gemini 3.8 Flash with multi-model fallback."""
     env_file = os.path.join(os.path.dirname(__file__), ".env")
     if os.path.exists(env_file):
@@ -1056,9 +1158,15 @@ def execute_llm_text_to_sql(user_query, conn, limit=2500):
     if any(re.search(r'\b' + term + r'\b', sql_upper) for term in forbidden_terms):
         return None, "FORBIDDEN_KEYWORD"
 
-    # Append LIMIT if missing to prevent unbounded queries
+    # Ensure LIMIT allows complete multi-year regulatory retrieval without truncation
     if "LIMIT" not in sql_upper:
         sql += f" LIMIT {limit}"
+    else:
+        # If model generated a smaller limit (e.g. 2500), elevate to current limit
+        def _elevate_limit(m):
+            cur_l = int(m.group(1))
+            return f"LIMIT {max(cur_l, limit)}"
+        sql = re.sub(r'\bLIMIT\s+(\d+)\b', _elevate_limit, sql, flags=re.IGNORECASE)
 
     # Execute SQLite query safely
     try:
@@ -1180,6 +1288,81 @@ def execute_llm_grounded_synthesis(user_query, results, parsed):
             continue
 
     return None, "ALL_MODELS_UNAVAILABLE"
+
+
+def get_regulatory_taxonomy_stats(conn, year=None, min_year=None, max_year=None, therapy_area=None, company=None, molecule_type=None):
+    """
+    Computes precise, multi-tier statistics across the 4 regulatory groups:
+      Group A: New Molecules (First in India Innovator NCE/NBE)
+      Group B: Biosimilars (Biologic follow-ons)
+      Group C: Generics (Small molecule copies)
+      Group D: All Clearances (Total filings including line extensions & strengths)
+    """
+    conds = []
+    params = []
+    if year:
+        conds.append("a.approval_year = ?")
+        params.append(year)
+    else:
+        if min_year:
+            conds.append("a.approval_year >= ?")
+            params.append(min_year)
+        if max_year:
+            conds.append("a.approval_year <= ?")
+            params.append(max_year)
+    if therapy_area:
+        conds.append("(a.therapy_area = ? OR a.therapy_area LIKE ? OR a.therapy_area LIKE ? OR a.therapy_area LIKE ?)")
+        params.extend([therapy_area, f"{therapy_area},%", f"%, {therapy_area}", f"%, {therapy_area},%"])
+    if company:
+        conds.append("(a.company_std = ? OR a.company LIKE ?)")
+        params.extend([company, f"%{company}%"])
+    if molecule_type:
+        conds.append("a.molecule_type = ?")
+        params.append(molecule_type)
+
+    where_clause = ("WHERE " + " AND ".join(conds)) if conds else ""
+    first_min_cond = min_year if min_year else (year if year else 1900)
+    first_max_cond = max_year if max_year else (year if year else 9999)
+
+    sql = f"""
+    WITH mol_first AS (
+        SELECT clean_molecule, MIN(approval_date_iso) as first_iso, MIN(approval_year) as first_yr
+        FROM approvals
+        WHERE clean_molecule IS NOT NULL AND clean_molecule != ''
+        GROUP BY clean_molecule
+    )
+    SELECT 
+        COUNT(DISTINCT CASE 
+            WHEN mf.first_yr >= ? AND mf.first_yr <= ? AND a.approval_year = mf.first_yr AND a.approval_date_iso = mf.first_iso AND a.regulatory_type = 'Innovator' 
+            THEN a.clean_molecule END) as grp_a_molecules,
+        COUNT(CASE 
+            WHEN mf.first_yr >= ? AND mf.first_yr <= ? AND a.approval_year = mf.first_yr AND a.approval_date_iso = mf.first_iso AND a.regulatory_type = 'Innovator' 
+            THEN 1 END) as grp_a_filings,
+        COUNT(DISTINCT CASE 
+            WHEN mf.first_yr >= ? AND mf.first_yr <= ? AND a.approval_year = mf.first_yr AND a.approval_date_iso = mf.first_iso AND a.regulatory_type = 'Innovator' AND a.molecule_type = 'Biologic'
+            THEN a.clean_molecule END) as grp_a_biologics,
+        COUNT(DISTINCT CASE 
+            WHEN mf.first_yr >= ? AND mf.first_yr <= ? AND a.approval_year = mf.first_yr AND a.approval_date_iso = mf.first_iso AND a.regulatory_type = 'Innovator' AND a.molecule_type = 'Small Molecule'
+            THEN a.clean_molecule END) as grp_a_small_mols,
+        COUNT(DISTINCT CASE WHEN a.regulatory_type = 'Biosimilar' THEN a.clean_molecule END) as grp_b_molecules,
+        COUNT(CASE WHEN a.regulatory_type = 'Biosimilar' THEN 1 END) as grp_b_filings,
+        COUNT(DISTINCT CASE WHEN a.regulatory_type = 'Generic' THEN a.clean_molecule END) as grp_c_molecules,
+        COUNT(CASE WHEN a.regulatory_type = 'Generic' THEN 1 END) as grp_c_filings,
+        COUNT(*) as grp_d_total_filings,
+        COUNT(DISTINCT a.clean_molecule) as total_distinct_molecules
+    FROM approvals a
+    JOIN mol_first mf ON a.clean_molecule = mf.clean_molecule
+    {where_clause}
+    """
+    c = conn.cursor()
+    all_params = [first_min_cond, first_max_cond, first_min_cond, first_max_cond, first_min_cond, first_max_cond, first_min_cond, first_max_cond] + params
+    c.execute(sql, all_params)
+    row = c.fetchone()
+    return dict(row) if row else {
+        "grp_a_molecules": 0, "grp_a_filings": 0, "grp_a_biologics": 0, "grp_a_small_mols": 0,
+        "grp_b_molecules": 0, "grp_b_filings": 0, "grp_c_molecules": 0, "grp_c_filings": 0,
+        "grp_d_total_filings": 0, "total_distinct_molecules": 0
+    }
 
 
 def generate_analytical_summary(query, parsed, results):
@@ -1324,6 +1507,71 @@ def generate_analytical_summary(query, parsed, results):
         return summary, results
 
     elif intent == "count":
+        is_mol_q = bool(
+            parsed.get("is_molecule_level") or
+            parsed.get("regulatory_group") or
+            any(term in q_lower for term in [
+                "new molecule", "new molecules", "novel molecule", "novel molecules",
+                "distinct molecule", "distinct molecules", "first in india",
+                "biosimilar", "biosimilars", "generic", "generics"
+            ])
+        )
+        min_yr = parsed.get("min_year")
+        max_yr = parsed.get("max_year")
+        reg_grp = parsed.get("regulatory_group")
+
+        if is_mol_q or min_yr or reg_grp:
+            conn = get_db()
+            tax_stats = get_regulatory_taxonomy_stats(
+                conn, 
+                year=year, 
+                min_year=min_yr, 
+                max_year=max_yr,
+                therapy_area=ta, 
+                company=comp, 
+                molecule_type=mol_type
+            )
+            conn.close()
+
+            grp_a_mols = tax_stats["grp_a_molecules"]
+            grp_a_filings = tax_stats["grp_a_filings"]
+            grp_a_bio = tax_stats["grp_a_biologics"]
+            grp_a_sm = tax_stats["grp_a_small_mols"]
+            grp_b_mols = tax_stats["grp_b_molecules"]
+            grp_b_filings = tax_stats["grp_b_filings"]
+            grp_c_mols = tax_stats["grp_c_molecules"]
+            grp_c_filings = tax_stats["grp_c_filings"]
+            grp_d_total = tax_stats["grp_d_total_filings"]
+
+            time_desc = f"since {min_yr}" if min_yr else (f"in {year}" if year else "in the registry")
+            summary = (
+                f"Between **{min_yr or year or '2018'} and {max_yr or year or 2026}**, CDSCO approved **{grp_a_mols} new molecules** (first Indian clearances), representing **{grp_a_filings} initial clearances**.\n\n"
+                f"**4-Group Regulatory Breakdown ({time_desc}):**\n"
+                f"• **★ Group A (New Molecules - First in India / Innovator)**: **{grp_a_mols} distinct molecules** ({grp_a_bio} Biologics, {grp_a_sm} Small Molecules) across **{grp_a_filings} initial clearances**.\n"
+                f"• **🧬 Group B (Biosimilars - Biologic Follow-ons)**: **{grp_b_mols} distinct biologic molecules** across **{grp_b_filings} clearances**.\n"
+                f"• **💊 Group C (Generics - Small Molecule Copies)**: **{grp_c_mols} distinct small molecules** across **{grp_c_filings} clearances**.\n"
+                f"• **📋 Group D (Total Clearances)**: **{grp_d_total} total clearances** (including line extensions and new dosage forms)."
+            )
+
+            filtered_results = results
+            if parsed.get("is_molecule_level") or reg_grp == "new_molecule":
+                distinct_mols = []
+                seen_mols = set()
+                for r in results:
+                    if r.get("approval_group_code") == "new_molecule":
+                        mk = (r.get("clean_molecule") or r.get("drug_name") or "").strip()
+                        if mk and mk.lower() not in seen_mols:
+                            seen_mols.add(mk.lower())
+                            distinct_mols.append(r)
+                if distinct_mols:
+                    filtered_results = distinct_mols
+            elif reg_grp == "biosimilar":
+                filtered_results = [r for r in results if r.get("approval_group_code") == "biosimilar" or r.get("regulatory_type") == "Biosimilar"]
+            elif reg_grp == "generic":
+                filtered_results = [r for r in results if r.get("approval_group_code") == "generic" or r.get("regulatory_type") == "Generic"]
+
+            return summary, filtered_results
+
         sm_count = sum(1 for r in results if r.get("molecule_type") == "Small Molecule")
         bio_count = sum(1 for r in results if r.get("molecule_type") == "Biologic")
         mono_count = sum(1 for r in results if r.get("formulation_type") == "Monotherapy")
@@ -1356,10 +1604,10 @@ async def search_endpoint(request):
     form_filter = request.query_params.get("form_type", "").strip()
     raw_sort = request.query_params.get("sort", "").strip()
 
-    # Allow full results (e.g. 575 in 2026, 615 in 2025, 1023 in 2022) without arbitrary 100-result truncation
-    limit = int(request.query_params.get("limit", 2500))
+    # Allow full results across all years without arbitrary truncation
+    limit = int(request.query_params.get("limit", 6000))
     if limit <= 100:
-        limit = 2500
+        limit = 6000
 
     parsed = parse_query_intent(query)
     is_refinement = False
@@ -1388,6 +1636,17 @@ async def search_endpoint(request):
     if year_filter:
         try: parsed["year"] = int(year_filter)
         except: pass
+    min_year_filter = request.query_params.get("min_year", "").strip()
+    max_year_filter = request.query_params.get("max_year", "").strip()
+    reg_group_filter = request.query_params.get("reg_group", "").strip()
+    if min_year_filter:
+        try: parsed["min_year"] = int(min_year_filter)
+        except: pass
+    if max_year_filter:
+        try: parsed["max_year"] = int(max_year_filter)
+        except: pass
+    if reg_group_filter:
+        parsed["regulatory_group"] = reg_group_filter
     if cat_filter: parsed["product_category"] = cat_filter
     if comp_filter: parsed["company"] = comp_filter
     if mol_filter: parsed["molecule_type"] = mol_filter
@@ -1409,10 +1668,17 @@ async def search_endpoint(request):
             f"%, {parsed['therapy_area']},%"
         ])
 
-    # 2. Apply Year filter
-    if parsed["year"]:
+    # 2. Apply Year filter (exact year or min/max range)
+    if parsed.get("year"):
         conditions.append("approval_year = ?")
         params.append(parsed["year"])
+    else:
+        if parsed.get("min_year"):
+            conditions.append("approval_year >= ?")
+            params.append(parsed["min_year"])
+        if parsed.get("max_year"):
+            conditions.append("approval_year <= ?")
+            params.append(parsed["max_year"])
 
     # 3. Apply Category filter
     if parsed["product_category"]:
@@ -1436,6 +1702,14 @@ async def search_endpoint(request):
             conditions.append("(drug_name NOT LIKE '%+%' AND (composition IS NULL OR composition NOT LIKE '%+%') AND drug_name NOT LIKE '% / %')")
         elif parsed["formulation_type"] == "Combination (FDC)":
             conditions.append("(drug_name LIKE '%+%' OR composition LIKE '%+%' OR drug_name LIKE '% / %')")
+
+    # 5c. Apply Regulatory Taxonomy filter (Group A Innovator, Group B Biosimilar, Group C Generic)
+    if parsed.get("regulatory_group") == "biosimilar":
+        conditions.append("regulatory_type = 'Biosimilar'")
+    elif parsed.get("regulatory_group") == "generic":
+        conditions.append("regulatory_type = 'Generic'")
+    elif parsed.get("regulatory_group") == "new_molecule":
+        conditions.append("regulatory_type = 'Innovator'")
 
     # 6. Apply Precision Search for Drug/Molecule terms
     # IMPORTANT: Do NOT match indication text when searching for a molecule!
@@ -1502,9 +1776,12 @@ async def search_endpoint(request):
                 did_you_mean = corrected_mol
                 corr_conds = []
                 corr_params = []
-                if parsed["year"]:
+                if parsed.get("year"):
                     corr_conds.append("approval_year = ?")
                     corr_params.append(parsed["year"])
+                elif parsed.get("min_year"):
+                    corr_conds.append("approval_year >= ?")
+                    corr_params.append(parsed["min_year"])
                 corr_conds.append("(clean_molecule LIKE ? OR drug_name LIKE ?)")
                 corr_params.extend([f"%{corrected_mol}%", f"%{corrected_mol}%"])
                 corr_order = "approval_date_iso ASC" if sort_by == "date_asc" else "approval_date_iso DESC"
@@ -1527,9 +1804,12 @@ async def search_endpoint(request):
         if not rows and parsed["clean_text"] and len(parsed["clean_text"]) > 2 and not parsed["therapy_area"]:
             fallback_conds = []
             fallback_params = []
-            if parsed["year"]:
+            if parsed.get("year"):
                 fallback_conds.append("approval_year = ?")
                 fallback_params.append(parsed["year"])
+            elif parsed.get("min_year"):
+                fallback_conds.append("approval_year >= ?")
+                fallback_params.append(parsed["min_year"])
             fallback_conds.append("indication LIKE ?")
             fallback_params.append(f"%{parsed['clean_text']}%")
             fb_order = "approval_date_iso ASC" if sort_by == "date_asc" else "approval_date_iso DESC"
@@ -1570,6 +1850,31 @@ async def search_endpoint(request):
         formulation_type = "Combination (FDC)" if is_fdc else "Monotherapy"
         iso_val = r["approval_date_iso"] if "approval_date_iso" in r.keys() and r["approval_date_iso"] else parse_date_tuple(r["approval_date"])
         
+        # Molecular lineage & first Indian clearance tracking
+        m_key = (clean_m or d_name).lower().strip()
+        lin = MOLECULE_LINEAGE_MAP.get(m_key, {})
+        first_date = lin.get("first_date") or r["approval_date"]
+        first_iso = lin.get("first_date_iso") or iso_val
+        first_yr = lin.get("first_year") or r["approval_year"]
+        
+        # Row is the very first clearance if it matches the earliest ISO date/year
+        is_first_in_india = bool(first_yr and r["approval_year"] and int(r["approval_year"]) <= int(first_yr) and (not first_iso or str(iso_val)[:10] <= str(first_iso)[:10]))
+        reg_status = "New Substance (First in India)" if is_first_in_india else f"Line Extension (First cleared {first_yr})"
+
+        r_type = r["regulatory_type"] if "regulatory_type" in r.keys() and r["regulatory_type"] else "Innovator"
+        if is_first_in_india and r_type == "Innovator":
+            grp_code = "new_molecule"
+            grp_label = "Group A: New Molecule (First in India)"
+        elif r_type == "Biosimilar":
+            grp_code = "biosimilar"
+            grp_label = "Group B: Biosimilar"
+        elif r_type == "Generic":
+            grp_code = "generic"
+            grp_label = "Group C: Generic"
+        else:
+            grp_code = "line_extension"
+            grp_label = f"Line Extension (First cleared {first_yr})"
+
         results.append({
             "id": r["id"],
             "form_id": r["form_id"],
@@ -1592,8 +1897,15 @@ async def search_endpoint(request):
             "therapy_areas": [ta.strip() for ta in (r["therapy_area"] or "Other").split(",") if ta.strip()],
             "product_category": r["product_category"],
             "molecule_type": r["molecule_type"] or "Small Molecule",
+            "regulatory_type": r_type,
+            "approval_group_code": grp_code,
+            "approval_group_label": grp_label,
             "formulation_type": formulation_type,
-            "is_combination": is_fdc
+            "is_combination": is_fdc,
+            "first_approval_date": first_date,
+            "first_approval_year": first_yr,
+            "is_first_in_india": is_first_in_india,
+            "regulatory_status": reg_status
         })
 
     elapsed_ms = round((time.time() - start_time) * 1000, 2)
@@ -1606,6 +1918,7 @@ async def search_endpoint(request):
         (parsed["year"] and not parsed["clean_text"]) or
         (parsed["therapy_area"] and not parsed["clean_text"]) or
         (parsed["company"] and not parsed["clean_text"]) or
+        (parsed["product_category"] and not parsed["clean_text"]) or
         (parsed.get("molecule_type") and not parsed["clean_text"]) or
         (parsed.get("analytical_intent") and not parsed["clean_text"]) or
         any(re.search(r'\b' + term + r'\b', q_low) for term in [
@@ -1745,13 +2058,18 @@ async def search_endpoint(request):
                 narrative_parts.append(f"Found **{total_count} verified CDSCO clearances** for **{parsed['company']}** in the official 2018–2026 registry.")
             elif parsed["therapy_area"] and not parsed["clean_text"] and not parsed["company"]:
                 yr_str = f" in **{parsed['year']}**" if parsed["year"] else ""
-                narrative_parts.append(f"Found **{total_count} verified CDSCO clearances** in **{parsed['therapy_area']}**{yr_str} (2018–2026).")
+                cat_str = f" ({parsed['product_category']}s)" if parsed.get("product_category") else ""
+                narrative_parts.append(f"Found **{total_count} verified CDSCO clearances** in **{parsed['therapy_area']}**{cat_str}{yr_str} (2018–2026).")
             elif parsed["year"] and not parsed["clean_text"] and not parsed["company"] and not parsed["therapy_area"]:
                 mol_str = f" for **{parsed['molecule_type']}s**" if parsed.get("molecule_type") else ""
-                narrative_parts.append(f"Found **{total_count} verified CDSCO clearances**{mol_str} recorded for **{parsed['year']}** in the official registry.")
+                cat_str = f" ({parsed['product_category']}s)" if parsed.get("product_category") else ""
+                narrative_parts.append(f"Found **{total_count} verified CDSCO clearances**{mol_str}{cat_str} recorded for **{parsed['year']}** in the official registry.")
+            elif parsed.get("product_category") and not parsed["clean_text"] and not parsed["company"] and not parsed["therapy_area"] and not parsed["year"]:
+                narrative_parts.append(f"Found **{total_count} verified CDSCO clearances** for **{parsed['product_category']}s** in the official 2018–2026 registry.")
             elif parsed["clean_text"]:
-                mol_label = results[0]["clean_molecule"] or parsed["clean_text"].title()
-                narrative_parts.append(f"Found **{total_count} verified CDSCO clearances** for **{mol_label}** in the official 2018–2026 registry.")
+                matched_mol = KNOWN_MOL_MAP.get(parsed["clean_text"].lower())
+                mol_label = matched_mol or parsed["clean_text"].title()
+                narrative_parts.append(f"Found **{total_count} verified CDSCO clearances** matching *\"{mol_label}\"* in the official 2018–2026 registry.")
             else:
                 narrative_parts.append(f"Found **{total_count} verified CDSCO approvals** matching *\"{q_disp}\"* (2018–2026 registry).")
 
@@ -1765,6 +2083,17 @@ async def search_endpoint(request):
             
             struct_str = f" ({', '.join(struct_parts)})" if struct_parts else ""
             narrative_parts.append(f"• **Classification**: {', '.join(type_parts)}{struct_str}.")
+
+            # Line 2b: Regulatory Lineage (New Substance First Approvals vs Line Extensions)
+            first_in_cohort = [r for r in results if r.get("is_first_in_india")]
+            first_count = len(first_in_cohort)
+            distinct_first_mols = list(dict.fromkeys([r.get("clean_molecule") or r.get("drug_name") for r in first_in_cohort if r.get("clean_molecule") or r.get("drug_name")]))
+            line_ext_count = total_count - first_count
+
+            if parsed.get("year") and first_count > 0 and line_ext_count > 0:
+                sample_mols = ", ".join([f"*{m}*" for m in distinct_first_mols[:3]])
+                sample_str = f" (including {sample_mols})" if sample_mols else ""
+                narrative_parts.append(f"• **Regulatory Lineage**: **{len(distinct_first_mols)} New Substances ({first_count} filings)** first approved in India in {parsed['year']}{sample_str}, alongside **{line_ext_count} Line Extensions / Additional Presentations** for previously approved molecules.")
 
             # Line 3: Clinical domain / Leaders
             if parsed["company"]:
